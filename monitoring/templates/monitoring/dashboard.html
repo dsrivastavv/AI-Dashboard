@@ -1,0 +1,240 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Workload System Health Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'monitoring/dashboard.css' %}">
+</head>
+<body>
+    <div
+        class="dashboard"
+        data-dashboard-root
+        data-latest-url="{% url 'monitoring:api_metrics_latest' %}"
+        data-history-url="{% url 'monitoring:api_metrics_history' %}"
+        data-default-minutes="{{ default_history_minutes }}"
+        data-max-minutes="{{ max_history_minutes }}"
+    >
+        <header class="hero panel">
+            <div>
+                <p class="eyebrow">AI Training Throughput Debugger</p>
+                <h1>System Health Dashboard</h1>
+                <p class="subtitle">
+                    CPU, GPU, memory, disk I/O, and network telemetry with bottleneck detection and history.
+                </p>
+                {% if user.is_authenticated %}
+                <div class="auth-chip">
+                    <span class="mono">{{ user.email|default:user.username }}</span>
+                    <a href="{% url 'account_logout' %}">Log out</a>
+                </div>
+                {% endif %}
+            </div>
+            <div class="hero-meta">
+                <div class="meta-block">
+                    <span class="meta-label">Last Sample</span>
+                    <span class="meta-value mono" id="last-sample-time">Waiting for data...</span>
+                </div>
+                <div class="meta-block">
+                    <span class="meta-label">Sample Age</span>
+                    <span class="meta-value mono" id="sample-age">-</span>
+                </div>
+                <div class="meta-block">
+                    <span class="meta-label">History Window</span>
+                    <div class="range-buttons" id="history-range-buttons">
+                        <button type="button" class="range-btn active" data-minutes="15">15m</button>
+                        <button type="button" class="range-btn" data-minutes="60">1h</button>
+                        <button type="button" class="range-btn" data-minutes="360">6h</button>
+                        <button type="button" class="range-btn" data-minutes="1440">24h</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="status-band panel">
+            <div class="status-main">
+                <span class="status-label">Training Bottleneck</span>
+                <div class="status-row">
+                    <span class="status-pill" id="bottleneck-pill">No Data</span>
+                    <span class="status-confidence mono" id="bottleneck-confidence">-</span>
+                </div>
+                <p id="bottleneck-reason" class="status-reason">Start the collector to stream metrics into the dashboard.</p>
+            </div>
+            <div class="status-metrics">
+                <div class="mini-stat">
+                    <span class="mini-label">Processes</span>
+                    <span class="mini-value mono" id="process-count">-</span>
+                </div>
+                <div class="mini-stat">
+                    <span class="mini-label">GPUs</span>
+                    <span class="mini-value mono" id="gpu-count">-</span>
+                </div>
+                <div class="mini-stat">
+                    <span class="mini-label">Disk Devices</span>
+                    <span class="mini-value mono" id="disk-count">-</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="kpi-grid">
+            <article class="kpi-card panel cpu-card">
+                <div class="kpi-head">
+                    <span>CPU</span>
+                    <span class="mono" id="cpu-value">-</span>
+                </div>
+                <div class="meter"><span id="cpu-bar"></span></div>
+                <p class="kpi-sub mono" id="cpu-detail">load: - / - / -</p>
+            </article>
+
+            <article class="kpi-card panel gpu-card">
+                <div class="kpi-head">
+                    <span>GPU Utilization</span>
+                    <span class="mono" id="gpu-value">-</span>
+                </div>
+                <div class="meter"><span id="gpu-bar"></span></div>
+                <p class="kpi-sub mono" id="gpu-detail">avg: - | mem: -</p>
+            </article>
+
+            <article class="kpi-card panel mem-card">
+                <div class="kpi-head">
+                    <span>Memory</span>
+                    <span class="mono" id="memory-value">-</span>
+                </div>
+                <div class="meter"><span id="memory-bar"></span></div>
+                <p class="kpi-sub mono" id="memory-detail">swap: -</p>
+            </article>
+
+            <article class="kpi-card panel disk-card">
+                <div class="kpi-head">
+                    <span>Disk I/O</span>
+                    <span class="mono" id="disk-util-value">-</span>
+                </div>
+                <div class="meter"><span id="disk-bar"></span></div>
+                <p class="kpi-sub mono" id="disk-detail">read: - | write: -</p>
+            </article>
+
+            <article class="kpi-card panel net-card">
+                <div class="kpi-head">
+                    <span>Network</span>
+                    <span class="mono" id="network-value">-</span>
+                </div>
+                <div class="meter"><span id="network-bar"></span></div>
+                <p class="kpi-sub mono" id="network-detail">tx: -</p>
+            </article>
+
+            <article class="kpi-card panel io-wait-card">
+                <div class="kpi-head">
+                    <span>CPU IOWait</span>
+                    <span class="mono" id="iowait-value">-</span>
+                </div>
+                <div class="meter"><span id="iowait-bar"></span></div>
+                <p class="kpi-sub mono" id="iowait-detail">Helps identify data pipeline stalls</p>
+            </article>
+        </section>
+
+        <section class="charts-grid">
+            <article class="panel chart-panel">
+                <div class="panel-head">
+                    <h2>Pipeline Saturation</h2>
+                    <p>CPU vs GPU vs memory vs disk util</p>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="pipeline-chart"></canvas>
+                </div>
+            </article>
+
+            <article class="panel chart-panel">
+                <div class="panel-head">
+                    <h2>Throughput</h2>
+                    <p>Disk and network bytes/sec</p>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="throughput-chart"></canvas>
+                </div>
+            </article>
+
+            <article class="panel chart-panel">
+                <div class="panel-head">
+                    <h2>GPU Timeline</h2>
+                    <p>Per-GPU utilization (%)</p>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="gpu-chart"></canvas>
+                </div>
+            </article>
+
+            <article class="panel chart-panel">
+                <div class="panel-head">
+                    <h2>Disk Timeline</h2>
+                    <p>Per-disk utilization (%) for tracked NVMe / block devices</p>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="disk-chart"></canvas>
+                </div>
+            </article>
+        </section>
+
+        <section class="tables-grid">
+            <article class="panel table-panel">
+                <div class="panel-head">
+                    <h2>Latest GPU Metrics</h2>
+                    <p>Useful for spotting underfed or memory-limited GPUs</p>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>GPU</th>
+                                <th>Util</th>
+                                <th>Mem</th>
+                                <th>Temp</th>
+                                <th>Power</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gpu-table-body">
+                            <tr><td colspan="5" class="empty-row">No GPU samples yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="panel table-panel">
+                <div class="panel-head">
+                    <h2>Latest Disk Metrics</h2>
+                    <p>Track dataset loader pressure and NVMe saturation</p>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Device</th>
+                                <th>Util</th>
+                                <th>Read</th>
+                                <th>Write</th>
+                                <th>IOPS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="disk-table-body">
+                            <tr><td colspan="5" class="empty-row">No disk samples yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+
+        <section class="panel footer-note">
+            <p>
+                Collector process: <code>python3 manage.py collect_metrics --interval 2</code>
+                <span class="mono subtle">Optional disk filter: MONITORING_DISKS=nvme0n1,nvme1n1</span>
+            </p>
+            <p id="error-banner" class="error-banner hidden"></p>
+        </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+    <script src="{% static 'monitoring/dashboard.js' %}"></script>
+</body>
+</html>
