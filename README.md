@@ -2,8 +2,9 @@
 
 Multi-server AI training system health dashboard with:
 
-- central Django webapp (dashboard + storage + ingest API)
+- central Django webapp (API + auth + storage)
 - pip-installable agent for each monitored server
+- Vision UI Dashboard React frontend (`vision-ui-dashboard-react/`)
 - Google login with allowlisted users
 - per-server CPU / GPU / memory / disk / network telemetry
 - bottleneck heuristics and time-series charts
@@ -17,9 +18,9 @@ Multi-server AI training system health dashboard with:
 - `docs/API_REFERENCE.md`
 - `docs/OPERATIONS.md`
 
-## Quick Start (Multi-Server)
+## Quick Start (Django Backend + React Frontend)
 
-## 1. Start the Webapp (Central Host)
+## 1. Start the Django Backend (Central Host)
 
 ```bash
 python3 -m venv .venv
@@ -29,12 +30,30 @@ pip install -r requirements.txt
 export GOOGLE_CLIENT_ID='YOUR_GOOGLE_WEB_APP_CLIENT_ID'
 export GOOGLE_CLIENT_SECRET='YOUR_GOOGLE_WEB_APP_CLIENT_SECRET'
 export GOOGLE_ALLOWED_EMAILS='you@gmail.com'
+export FRONTEND_APP_URL='http://127.0.0.1:3000'
 
 python3 manage.py migrate
 python3 manage.py runserver 0.0.0.0:8000
 ```
 
-## 2. Register a Monitored Server (Generates Ingest Token)
+## 2. Start the Vision UI React Frontend
+
+```bash
+cd vision-ui-dashboard-react
+corepack npm install
+corepack npm start
+```
+
+Notes:
+
+- The React app is configured with a CRA proxy to `http://127.0.0.1:8000`
+- Open `http://127.0.0.1:3000/dashboard`
+- Add Google OAuth callback URI for React dev proxy:
+  - `http://127.0.0.1:3000/accounts/google/login/callback/`
+  - `http://localhost:3000/accounts/google/login/callback/`
+- Django is backend-only; OAuth success/deny redirects are sent back to `FRONTEND_APP_URL`
+
+## 3. Register a Monitored Server (Generates Ingest Token)
 
 ```bash
 python3 manage.py register_server gpu-box-01 --name "GPU Box 01"
@@ -42,7 +61,7 @@ python3 manage.py register_server gpu-box-01 --name "GPU Box 01"
 
 Save the printed `INGEST_TOKEN`.
 
-## 3. Install and Run the Agent on the Remote Server
+## 4. Install and Run the Agent on the Remote Server
 
 ```bash
 cd agent_service
@@ -57,15 +76,15 @@ ai-dashboard-agent \
   --interval 2
 ```
 
-## 4. Open the Dashboard
+## 5. Open the Dashboard
 
-- `http://127.0.0.1:8000/`
+- `http://127.0.0.1:3000/dashboard` (React frontend)
 - Sign in with an allowlisted Google account
 - Select a server from the dropdown
 
 ## Optional: Local Collector (Single-Host Mode)
 
-You can still collect metrics directly on the Django host:
+You can still collect metrics directly on the Django host (backend machine):
 
 ```bash
 python3 manage.py collect_metrics --interval 2
@@ -92,6 +111,7 @@ ai-dashboard-agent --host http://127.0.0.1:8000 --server-slug gpu-box-01 --token
 ## Key Features
 
 - Multi-server selector in dashboard UI
+- Vision UI Dashboard React interface
 - Persistent time-series metrics
 - Per-GPU and per-disk breakdowns
 - GPU/CPU/IO bottleneck heuristics
@@ -104,5 +124,8 @@ ai-dashboard-agent --host http://127.0.0.1:8000 --server-slug gpu-box-01 --token
 - Configure Google OAuth redirect URI:
   - `http://127.0.0.1:8000/accounts/google/login/callback/`
   - `http://localhost:8000/accounts/google/login/callback/`
+- If using the React dev server proxy, also add:
+  - `http://127.0.0.1:3000/accounts/google/login/callback/`
+  - `http://localhost:3000/accounts/google/login/callback/`
 - Do not commit secrets (Google client secret, ingest tokens)
-
+- Backend root (`http://127.0.0.1:8000/`) returns JSON metadata; Django is backend-only

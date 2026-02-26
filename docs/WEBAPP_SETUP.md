@@ -4,7 +4,9 @@ This guide covers setting up the Django webapp that:
 
 - receives metric samples from agents
 - stores snapshots for multiple servers
-- serves the authenticated dashboard UI
+- serves auth and JSON APIs for the dashboard UI
+
+The dashboard frontend is now the Vision UI React app in `vision-ui-dashboard-react/`.
 
 ## Prerequisites
 
@@ -92,7 +94,7 @@ Authorized redirect URI:
 python3 manage.py migrate
 ```
 
-## 5. Start the Webapp
+## 5. Start the Django Backend
 
 Development:
 
@@ -102,7 +104,8 @@ python3 manage.py runserver 0.0.0.0:8000
 
 Then open:
 
-- `http://127.0.0.1:8000/`
+- `http://127.0.0.1:8000/` (backend / legacy Django template)
+- React UI is typically run separately on `http://127.0.0.1:3000/dashboard`
 
 ## 6. Register Monitored Servers (Create Ingest Tokens)
 
@@ -146,7 +149,28 @@ python3 manage.py register_server gpu-box-02 \
 - After login, user email/domain is checked against allowlists
 - Non-allowlisted users are redirected to `access-denied`
 
-## 8. Local Collector (Optional)
+## 8. Vision UI React Frontend (Recommended UI)
+
+From the project root:
+
+```bash
+cd vision-ui-dashboard-react
+corepack npm install
+corepack npm start
+```
+
+Open:
+
+- `http://127.0.0.1:3000/dashboard`
+
+The React app is configured with a CRA proxy to `http://127.0.0.1:8000`, so it can reuse Django auth and API endpoints in development.
+
+If using Google login through the React dev server proxy, add these callback URIs in Google Cloud Console too:
+
+- `http://127.0.0.1:3000/accounts/google/login/callback/`
+- `http://localhost:3000/accounts/google/login/callback/`
+
+## 9. Local Collector (Optional)
 
 If you also want to collect metrics directly on the webapp machine:
 
@@ -164,7 +188,7 @@ export MONITORING_LOCAL_SERVER_NAME='Dashboard Host'
 python3 manage.py collect_metrics --interval 2
 ```
 
-## 9. Production Deployment Notes
+## 10. Production Deployment Notes
 
 ## Reverse Proxy
 
@@ -189,7 +213,7 @@ Retention cleanup runs during ingest/collection when samples are stored.
 - Configure with `MONITORING_RETENTION_DAYS`
 - Old snapshots are deleted per server
 
-## 10. Security Checklist
+## 11. Security Checklist
 
 - Do not commit secrets (`GOOGLE_CLIENT_SECRET`, ingest tokens)
 - Use HTTPS in production
@@ -198,7 +222,7 @@ Retention cleanup runs during ingest/collection when samples are stored.
 - Rotate ingest tokens for decommissioned servers
 - Disable servers (`is_active=False`) to stop ingest without deleting history
 
-## 11. Validation Commands
+## 12. Validation Commands
 
 ```bash
 python3 manage.py check
@@ -206,7 +230,7 @@ python3 manage.py migrate
 python3 manage.py register_server test-node --name "Test Node"
 ```
 
-## 12. Common Startup Errors
+## 13. Common Startup Errors
 
 ### `Missing required parameter: client_id`
 
@@ -240,4 +264,3 @@ Fix: use the project requirements (which includes `django-allauth[socialaccount]
 ```bash
 pip install -r requirements.txt
 ```
-

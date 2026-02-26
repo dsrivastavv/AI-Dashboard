@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import json
 import math
+from urllib.parse import urlencode
 from datetime import timedelta
 from typing import Any
 
 from django.conf import settings
-from django.contrib import messages
 from django.contrib.auth import logout
-from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Max
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
@@ -167,7 +166,7 @@ def _serialize_snapshot(snapshot: MetricSnapshot) -> dict[str, Any]:
     }
 
 
-def _deny_if_not_allowlisted(request, *, api: bool = False):
+def _deny_if_not_allowlisted(request):
     user = getattr(request, "user", None)
     user_email = getattr(user, "email", "")
     if is_google_email_allowlisted(user_email):
@@ -175,19 +174,13 @@ def _deny_if_not_allowlisted(request, *, api: bool = False):
 
     if getattr(user, "is_authenticated", False):
         logout(request)
-    if api:
-        return JsonResponse(
-            {
-                "ok": False,
-                "error": "Access denied: your Google account is not in the allowlist.",
-            },
-            status=403,
-        )
-    messages.error(
-        request,
-        "Access denied: your Google account is not in the allowlist for this dashboard.",
+    return JsonResponse(
+        {
+            "ok": False,
+            "error": "Access denied: your Google account is not in the allowlist.",
+        },
+        status=403,
     )
-    return redirect("monitoring:access_denied")
 
 
 def _selected_server_and_list(request) -> tuple[MonitoredServer | None, list[MonitoredServer]]:
@@ -196,38 +189,45 @@ def _selected_server_and_list(request) -> tuple[MonitoredServer | None, list[Mon
     return selected, servers
 
 
-def dashboard(request):
-    if not request.user.is_authenticated:
-        return redirect(f"{settings.LOGIN_URL}?next={request.path}")
-    denied = _deny_if_not_allowlisted(request, api=False)
-    if denied is not None:
-        return denied
-    return render(
-        request,
-        "monitoring/dashboard.html",
+@require_GET
+def api_root(request):
+    return JsonResponse(
         {
-            "default_history_minutes": settings.MONITORING_DEFAULT_HISTORY_MINUTES,
-            "max_history_minutes": settings.MONITORING_MAX_HISTORY_MINUTES,
-        },
+            "ok": True,
+            "service": "ai-dashboard-backend",
+            "frontend_url": getattr(settings, "FRONTEND_APP_URL", ""),
+            "routes": {
+                "servers": "/api/servers/",
+                "metrics_latest": "/api/metrics/latest/",
+                "metrics_history": "/api/metrics/history/",
+                "google_login": "/accounts/google/login/",
+                "admin": "/admin/",
+            },
+        }
     )
 
 
-def access_denied(request):
-    return render(
-        request,
-        "monitoring/access_denied.html",
+def _api_auth_required_response(request) -> JsonResponse:
+    login_path = getattr(settings, "LOGIN_URL", "/accounts/google/login/") or "/accounts/google/login/"
+    query = urlencode({"next": request.get_full_path()})
+    separator = "&" if "?" in login_path else "?"
+    login_url = request.build_absolute_uri(f"{login_path}{separator}{query}")
+    return JsonResponse(
         {
-            "allowed_emails_count": len(getattr(settings, "GOOGLE_ALLOWED_EMAILS", set()) or []),
-            "allowed_domains": sorted(getattr(settings, "GOOGLE_ALLOWED_DOMAINS", set()) or []),
-            "google_oauth_configured": bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET),
+            "ok": False,
+            "error": "Authentication required.",
+            "auth_required": True,
+            "login_url": login_url,
         },
+        status=401,
     )
 
 
 @require_GET
-@login_required
 def api_servers(request):
-    denied = _deny_if_not_allowlisted(request, api=True)
+    if not request.user.is_authenticated:
+        return _api_auth_required_response(request)
+    denied = _deny_if_not_allowlisted(request)
     if denied is not None:
         return denied
     servers = list(_server_queryset())
@@ -240,9 +240,10 @@ def api_servers(request):
 
 
 @require_GET
-@login_required
 def api_metrics_latest(request):
-    denied = _deny_if_not_allowlisted(request, api=True)
+    if not request.user.is_authenticated:
+        return _api_auth_required_response(request)
+    denied = _deny_if_not_allowlisted(request)
     if denied is not None:
         return denied
 
@@ -285,9 +286,10 @@ def api_metrics_latest(request):
 
 
 @require_GET
-@login_required
 def api_metrics_history(request):
-    denied = _deny_if_not_allowlisted(request, api=True)
+    if not request.user.is_authenticated:
+        return _api_auth_required_response(request)
+    denied = _deny_if_not_allowlisted(request)
     if denied is not None:
         return denied
 

@@ -5,7 +5,6 @@ from functools import lru_cache
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.conf import settings
-from django.contrib import messages
 from django.shortcuts import redirect
 
 
@@ -85,19 +84,13 @@ class GoogleAllowlistSocialAccountAdapter(DefaultSocialAccountAdapter):
 
         email = _extract_social_email(sociallogin)
         if not email:
-            messages.error(request, "Google login failed: no email address was returned.")
-            raise ImmediateHttpResponse(redirect("monitoring:access_denied"))
+            raise ImmediateHttpResponse(redirect(settings.FRONTEND_ACCESS_DENIED_URL))
 
         if not _is_email_verified(sociallogin, email):
-            messages.error(request, f"Google account email '{email}' is not verified.")
-            raise ImmediateHttpResponse(redirect("monitoring:access_denied"))
+            raise ImmediateHttpResponse(redirect(settings.FRONTEND_ACCESS_DENIED_URL))
 
         if not is_google_email_allowlisted(email):
-            messages.error(
-                request,
-                f"Access denied for '{email}'. Ask an admin to add it to GOOGLE_ALLOWED_EMAILS.",
-            )
-            raise ImmediateHttpResponse(redirect("monitoring:access_denied"))
+            raise ImmediateHttpResponse(redirect(settings.FRONTEND_ACCESS_DENIED_URL))
 
     def pre_social_login(self, request, sociallogin):
         self._enforce_google_allowlist(request, sociallogin)
@@ -106,4 +99,3 @@ class GoogleAllowlistSocialAccountAdapter(DefaultSocialAccountAdapter):
     def is_open_for_signup(self, request, sociallogin):
         self._enforce_google_allowlist(request, sociallogin)
         return super().is_open_for_signup(request, sociallogin)
-

@@ -134,9 +134,16 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
+FRONTEND_APP_URL = os.environ.get('FRONTEND_APP_URL', 'http://127.0.0.1:3000').rstrip('/')
+FRONTEND_DASHBOARD_URL = os.environ.get('FRONTEND_DASHBOARD_URL', f'{FRONTEND_APP_URL}/dashboard').strip()
+FRONTEND_ACCESS_DENIED_URL = os.environ.get(
+    'FRONTEND_ACCESS_DENIED_URL',
+    f'{FRONTEND_APP_URL}/dashboard?access_denied=1',
+).strip()
+
+LOGIN_URL = '/accounts/google/login/'
+LOGIN_REDIRECT_URL = FRONTEND_DASHBOARD_URL
+LOGOUT_REDIRECT_URL = FRONTEND_DASHBOARD_URL
 
 # allauth account settings: Google OAuth is the intended path for dashboard access.
 ACCOUNT_EMAIL_VERIFICATION = 'none'
