@@ -11,13 +11,13 @@ staticfiles/
 *.egg-info/
 cred.txt
 
-vision-ui-dashboard-react/node_modules
+frontend/node_modules
 
 # testing
-vision-ui-dashboard-react/coverage
+frontend/coverage
 
 # production
-vision-ui-dashboard-react/build
+frontend/dist
 
 # misc
 .DS_Store
@@ -30,7 +30,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-package-lock.json
 yarn.lock
 
 commit.sh

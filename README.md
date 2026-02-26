@@ -4,7 +4,7 @@ Multi-server AI training system health dashboard with:
 
 - central Django webapp (API + auth + storage)
 - pip-installable agent for each monitored server
-- Vision UI Dashboard React frontend (`vision-ui-dashboard-react/`)
+- React frontend (`frontend/`) built with Vite + Bootstrap
 - Google login with allowlisted users
 - per-server CPU / GPU / memory / disk / network telemetry
 - bottleneck heuristics and time-series charts
@@ -36,17 +36,17 @@ python3 manage.py migrate
 python3 manage.py runserver 0.0.0.0:8000
 ```
 
-## 2. Start the Vision UI React Frontend
+## 2. Start the React Frontend (Vite + Bootstrap)
 
 ```bash
-cd vision-ui-dashboard-react
+cd frontend
 corepack npm install
-corepack npm start
+corepack npm run dev
 ```
 
 Notes:
 
-- The React app is configured with a CRA proxy to `http://127.0.0.1:8000`
+- The React app is configured with a Vite proxy to `http://127.0.0.1:8000`
 - Open `http://127.0.0.1:3000/dashboard`
 - Add Google OAuth callback URI for React dev proxy:
   - `http://127.0.0.1:3000/accounts/google/login/callback/`
@@ -111,7 +111,7 @@ ai-dashboard-agent --host http://127.0.0.1:8000 --server-slug gpu-box-01 --token
 ## Key Features
 
 - Multi-server selector in dashboard UI
-- Vision UI Dashboard React interface
+- React + Bootstrap dashboard interface
 - Persistent time-series metrics
 - Per-GPU and per-disk breakdowns
 - GPU/CPU/IO bottleneck heuristics

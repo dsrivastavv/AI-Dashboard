@@ -6,7 +6,7 @@ The system is split into:
 
 1. A central Django webapp that stores metrics and serves auth + APIs
 2. A lightweight agent that runs on each monitored host and pushes raw counters/telemetry to the webapp
-3. A Vision UI Dashboard React frontend that renders the dashboard UI using the Django APIs
+3. A React frontend (Vite + Bootstrap) that renders the dashboard UI using the Django APIs
 
 The webapp supports multiple servers and the dashboard can switch between them using a selector.
 
@@ -30,7 +30,7 @@ This design solves the main scaling and usability problems of a single-host dash
    - Authenticates agents with per-server ingest token
    - Stores snapshots and child rows in SQLite (or another Django DB backend)
    - Computes rates and bottleneck heuristics on ingest
-3. `Browser Dashboard (Vision UI React)`
+3. `Browser Dashboard (React + Bootstrap)`
    - Calls authenticated JSON APIs
    - Uses a server selector to switch hosts
    - Displays cards, charts, tables, and bottleneck labels

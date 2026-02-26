@@ -4,14 +4,14 @@ This project has two deployable parts:
 
 1. `Webapp Backend` (Django): auth + ingest API + storage
 2. `Agent` (pip-installable): runs on each monitored server and sends metrics to the webapp
-3. `Frontend UI` (Vision UI Dashboard React): dashboard experience that consumes the Django APIs
+3. `Frontend UI` (React + Bootstrap in `frontend/`): dashboard experience that consumes the Django APIs
 
 ## Read This First
 
 - `README.md`: fast quickstart + common commands
 - `docs/ARCHITECTURE.md`: end-to-end system design and data flow
 - `docs/WEBAPP_SETUP.md`: production/dev setup for the Django webapp
-- `vision-ui-dashboard-react/README.md`: frontend package quickstart
+- `frontend/`: Vite React frontend package
 - `docs/AGENT_GUIDE.md`: install and run the remote monitoring agent
 - `docs/API_REFERENCE.md`: ingest and dashboard API contract
 - `docs/OPERATIONS.md`: token rotation, maintenance, troubleshooting, and upgrades

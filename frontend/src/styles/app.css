@@ -1,0 +1,56 @@
+:root {
+  --app-bg-top: #edf4ff;
+  --app-bg-bottom: #f8fbff;
+  --login-bg-top: #f2f7ff;
+  --login-bg-bottom: #ffffff;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: #1f2937;
+  background: linear-gradient(180deg, var(--app-bg-top) 0%, var(--app-bg-bottom) 100%);
+}
+
+.dashboard-bg {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(13, 110, 253, 0.1), transparent 35%),
+    radial-gradient(circle at 100% 0%, rgba(25, 135, 84, 0.08), transparent 40%),
+    linear-gradient(180deg, var(--app-bg-top) 0%, var(--app-bg-bottom) 100%);
+}
+
+.login-bg {
+  background:
+    radial-gradient(circle at 15% 10%, rgba(13, 110, 253, 0.15), transparent 30%),
+    radial-gradient(circle at 85% 0%, rgba(13, 202, 240, 0.12), transparent 35%),
+    linear-gradient(180deg, var(--login-bg-top) 0%, var(--login-bg-bottom) 100%);
+}
+
+.login-card {
+  backdrop-filter: blur(6px);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.chart-frame {
+  height: 320px;
+}
+
+.border-dashed-subtle {
+  border-style: dashed !important;
+  border-color: rgba(33, 37, 41, 0.15) !important;
+}
+
+.table > :not(caption) > * > * {
+  vertical-align: middle;
+}
+
+@media (max-width: 767.98px) {
+  .chart-frame {
+    height: 260px;
+  }
+}

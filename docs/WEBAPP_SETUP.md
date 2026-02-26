@@ -6,7 +6,7 @@ This guide covers setting up the Django webapp that:
 - stores snapshots for multiple servers
 - serves auth and JSON APIs for the dashboard UI
 
-The dashboard frontend is now the Vision UI React app in `vision-ui-dashboard-react/`.
+The dashboard frontend is now the React app in `frontend/` (Vite + Bootstrap).
 
 ## Prerequisites
 
@@ -104,7 +104,7 @@ python3 manage.py runserver 0.0.0.0:8000
 
 Then open:
 
-- `http://127.0.0.1:8000/` (backend / legacy Django template)
+- `http://127.0.0.1:8000/` (backend JSON metadata)
 - React UI is typically run separately on `http://127.0.0.1:3000/dashboard`
 
 ## 6. Register Monitored Servers (Create Ingest Tokens)
@@ -149,21 +149,21 @@ python3 manage.py register_server gpu-box-02 \
 - After login, user email/domain is checked against allowlists
 - Non-allowlisted users are redirected to `access-denied`
 
-## 8. Vision UI React Frontend (Recommended UI)
+## 8. React Frontend (Vite + Bootstrap)
 
 From the project root:
 
 ```bash
-cd vision-ui-dashboard-react
+cd frontend
 corepack npm install
-corepack npm start
+corepack npm run dev
 ```
 
 Open:
 
 - `http://127.0.0.1:3000/dashboard`
 
-The React app is configured with a CRA proxy to `http://127.0.0.1:8000`, so it can reuse Django auth and API endpoints in development.
+The React app is configured with a Vite proxy to `http://127.0.0.1:8000`, so it can reuse Django auth and API endpoints in development.
 
 If using Google login through the React dev server proxy, add these callback URIs in Google Cloud Console too:
 
