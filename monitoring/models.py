@@ -1,7 +1,94 @@
+from __future__ import annotations
+
+import hashlib
+import hmac
+import secrets
+
 from django.db import models
+from django.utils.text import slugify
+
+
+class MonitoredServer(models.Model):
+    slug = models.SlugField(max_length=64, unique=True)
+    name = models.CharField(max_length=128)
+    hostname = models.CharField(max_length=255, blank=True)
+    description = models.TextField(blank=True)
+    api_token_hash = models.CharField(max_length=64, db_index=True)
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    last_ip = models.GenericIPAddressField(null=True, blank=True)
+    last_agent_version = models.CharField(max_length=64, blank=True)
+    agent_info = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["name", "slug"]
+        indexes = [
+            models.Index(fields=["is_active", "name"]),
+            models.Index(fields=["-last_seen_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.slug})"
+
+    @staticmethod
+    def generate_token() -> str:
+        return secrets.token_urlsafe(32)
+
+    @staticmethod
+    def hash_token(token: str) -> str:
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    def set_api_token(self, token: str) -> None:
+        self.api_token_hash = self.hash_token(token)
+
+    def check_api_token(self, token: str) -> bool:
+        if not token or not self.api_token_hash:
+            return False
+        return hmac.compare_digest(self.api_token_hash, self.hash_token(token))
+
+    @property
+    def token_hint(self) -> str:
+        return f"{self.api_token_hash[:8]}..." if self.api_token_hash else ""
+
+    @classmethod
+    def ensure_local_server(
+        cls, *, slug: str = "local", name: str = "Local Host", hostname: str = ""
+    ) -> "MonitoredServer":
+        base_slug = slugify(slug or "local")[:64] or "local"
+        defaults = {
+            "name": (name or "Local Host")[:128],
+            "hostname": hostname[:255] if hostname else "",
+            "api_token_hash": cls.hash_token(cls.generate_token()),
+            "is_active": True,
+        }
+        server, created = cls.objects.get_or_create(slug=base_slug, defaults=defaults)
+        if not created:
+            changed = False
+            if hostname and server.hostname != hostname:
+                server.hostname = hostname[:255]
+                changed = True
+            if name and server.name != name:
+                server.name = name[:128]
+                changed = True
+            if not server.api_token_hash:
+                server.api_token_hash = cls.hash_token(cls.generate_token())
+                changed = True
+            if changed:
+                server.save(update_fields=["hostname", "name", "api_token_hash", "updated_at"])
+        return server
 
 
 class MetricSnapshot(models.Model):
+    server = models.ForeignKey(
+        MonitoredServer,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="snapshots",
+    )
     collected_at = models.DateTimeField(db_index=True)
     interval_seconds = models.FloatField(null=True, blank=True)
 
@@ -53,11 +140,13 @@ class MetricSnapshot(models.Model):
         ordering = ["-collected_at"]
         indexes = [
             models.Index(fields=["-collected_at"]),
+            models.Index(fields=["server", "collected_at"]),
             models.Index(fields=["bottleneck", "-collected_at"]),
         ]
 
     def __str__(self) -> str:
-        return f"{self.collected_at.isoformat()} ({self.bottleneck})"
+        server_slug = self.server.slug if self.server_id and self.server else "unassigned"
+        return f"{server_slug} {self.collected_at.isoformat()} ({self.bottleneck})"
 
 
 class GpuMetric(models.Model):
@@ -117,5 +206,3 @@ class DiskMetric(models.Model):
 
     def __str__(self) -> str:
         return f"{self.device} @ {self.snapshot.collected_at.isoformat()}"
-
-# Create your models here.

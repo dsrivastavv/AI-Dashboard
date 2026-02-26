@@ -2,14 +2,19 @@
   const root = document.querySelector("[data-dashboard-root]");
   if (!root) return;
 
+  const serversUrl = root.dataset.serversUrl;
   const latestUrl = root.dataset.latestUrl;
   const historyUrl = root.dataset.historyUrl;
   const maxMinutes = Number(root.dataset.maxMinutes || 1440);
   let currentMinutes = Math.min(maxMinutes, Number(root.dataset.defaultMinutes || 60));
+  let currentServer = "";
+  let knownServers = [];
   let latestPollHandle = null;
   let historyPollHandle = null;
+  let serversPollHandle = null;
   let loadingLatest = false;
   let loadingHistory = false;
+  let loadingServers = false;
   const charts = {};
 
   const palette = [
@@ -32,6 +37,72 @@
     } else {
       banner.textContent = "";
       banner.classList.add("hidden");
+    }
+  }
+
+  function buildApiUrl(baseUrl, params = {}) {
+    const url = new URL(baseUrl, window.location.origin);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === "") return;
+      url.searchParams.set(key, String(value));
+    });
+    if (currentServer) {
+      url.searchParams.set("server", currentServer);
+    }
+    return url.toString();
+  }
+
+  function setSelectedServerMeta(server) {
+    if (!server) {
+      setText("selected-server-meta", "No server selected");
+      return;
+    }
+    const hostPart = server.hostname ? ` (${server.hostname})` : "";
+    const seenPart = server.last_seen_at ? ` | seen ${formatTime(server.last_seen_at)}` : " | no samples yet";
+    setText("selected-server-meta", `${server.name}${hostPart}${seenPart}`);
+  }
+
+  function renderServerSelector(servers, selectedServer) {
+    const select = document.getElementById("server-selector");
+    if (!select) return;
+    knownServers = Array.isArray(servers) ? servers : [];
+
+    if (knownServers.length === 0) {
+      currentServer = "";
+      select.innerHTML = '<option value="">No servers registered</option>';
+      select.disabled = true;
+      setSelectedServerMeta(null);
+      return;
+    }
+
+    select.disabled = false;
+    const selectedValue = String(
+      selectedServer?.slug || currentServer || knownServers[0]?.slug || ""
+    );
+    select.innerHTML = knownServers
+      .map((server) => {
+        const latest = server.latest_snapshot_at ? ` • ${formatShortTime(server.latest_snapshot_at)}` : "";
+        const hostname = server.hostname ? ` (${server.hostname})` : "";
+        return `<option value="${escapeHtml(server.slug)}">${escapeHtml(server.name)}${escapeHtml(hostname)}${escapeHtml(latest)}</option>`;
+      })
+      .join("");
+    if (selectedValue) {
+      select.value = selectedValue;
+      currentServer = select.value;
+    }
+    const selected = knownServers.find((s) => s.slug === currentServer) || knownServers[0] || null;
+    if (selected && currentServer !== selected.slug) {
+      currentServer = selected.slug;
+      select.value = selected.slug;
+    }
+    setSelectedServerMeta(selected);
+  }
+
+  function syncServerStateFromResponse(data) {
+    if (Array.isArray(data?.servers)) {
+      renderServerSelector(data.servers, data.selected_server || data?.snapshot?.server || null);
+    } else if (data?.selected_server) {
+      setSelectedServerMeta(data.selected_server);
     }
   }
 
@@ -169,6 +240,10 @@
 
   function renderLatest(snapshot) {
     if (!snapshot) return;
+    if (snapshot.server?.slug) {
+      currentServer = snapshot.server.slug;
+      setSelectedServerMeta(snapshot.server);
+    }
 
     setText("last-sample-time", formatTime(snapshot.collected_at));
     const age = toNumber(snapshot.age_seconds);
@@ -414,7 +489,10 @@
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data.ok === false) {
       const error = data?.error || `${response.status} ${response.statusText}`;
-      throw new Error(error);
+      const err = new Error(error);
+      err.status = response.status;
+      err.payload = data;
+      throw err;
     }
     return data;
   }
@@ -423,10 +501,14 @@
     if (loadingLatest) return;
     loadingLatest = true;
     try {
-      const data = await fetchJson(latestUrl);
+      const data = await fetchJson(buildApiUrl(latestUrl));
+      syncServerStateFromResponse(data);
       renderLatest(data.snapshot);
       setError("");
     } catch (error) {
+      if (error.payload) {
+        syncServerStateFromResponse(error.payload);
+      }
       setError(`Latest metrics request failed: ${error.message}`);
     } finally {
       loadingLatest = false;
@@ -437,10 +519,14 @@
     if (loadingHistory) return;
     loadingHistory = true;
     try {
-      const data = await fetchJson(`${historyUrl}?minutes=${encodeURIComponent(currentMinutes)}`);
+      const data = await fetchJson(buildApiUrl(historyUrl, { minutes: currentMinutes }));
+      syncServerStateFromResponse(data);
       renderHistory(data.points || []);
       setError("");
     } catch (error) {
+      if (error.payload) {
+        syncServerStateFromResponse(error.payload);
+      }
       setError(`History request failed: ${error.message}`);
     } finally {
       loadingHistory = false;
@@ -473,11 +559,41 @@
     setRange(currentMinutes);
   }
 
+  async function refreshServers() {
+    if (loadingServers || !serversUrl) return;
+    loadingServers = true;
+    try {
+      const data = await fetchJson(serversUrl);
+      const selectedFromList = data.servers.find((s) => s.slug === currentServer) || null;
+      renderServerSelector(data.servers || [], selectedFromList);
+      setError("");
+    } catch (error) {
+      setError(`Server list request failed: ${error.message}`);
+    } finally {
+      loadingServers = false;
+    }
+  }
+
+  function setupServerSelector() {
+    const select = document.getElementById("server-selector");
+    if (!select) return;
+    select.addEventListener("change", () => {
+      const nextServer = (select.value || "").trim();
+      if (nextServer === currentServer) return;
+      currentServer = nextServer;
+      const selected = knownServers.find((s) => s.slug === currentServer) || null;
+      setSelectedServerMeta(selected);
+      Promise.all([refreshLatest(), refreshHistory()]);
+    });
+  }
+
   function startPolling() {
     clearInterval(latestPollHandle);
     clearInterval(historyPollHandle);
+    clearInterval(serversPollHandle);
     latestPollHandle = setInterval(refreshLatest, 4000);
     historyPollHandle = setInterval(refreshHistory, 20000);
+    serversPollHandle = setInterval(refreshServers, 30000);
   }
 
   async function init() {
@@ -487,11 +603,12 @@
       Chart.defaults.plugins.legend.display = true;
     }
 
+    setupServerSelector();
     setupRangeButtons();
+    await refreshServers();
     await Promise.all([refreshLatest(), refreshHistory()]);
     startPolling();
   }
 
   init();
 })();
-

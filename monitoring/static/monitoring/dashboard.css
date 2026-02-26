@@ -141,6 +141,22 @@ body::before {
     font-weight: 500;
 }
 
+.server-select {
+    width: 100%;
+    min-height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(160, 188, 214, 0.16);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text);
+    padding: 0 10px;
+    font: inherit;
+}
+
+.server-select:focus {
+    outline: 2px solid rgba(91, 180, 255, 0.35);
+    outline-offset: 1px;
+}
+
 .mono {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
 }

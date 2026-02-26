@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import os
 import re
+import socket
 import subprocess
 import warnings
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import psutil
 from django.conf import settings
 from django.db import transaction
+from django.utils.dateparse import parse_datetime
 from django.utils import timezone
 
-from monitoring.models import DiskMetric, GpuMetric, MetricSnapshot
+from monitoring.models import DiskMetric, GpuMetric, MetricSnapshot, MonitoredServer
 
 
 PHYSICAL_DISK_RE = re.compile(r"^(nvme\d+n\d+|sd[a-z]+|vd[a-z]+|xvd[a-z]+|md\d+)$")
@@ -387,11 +389,98 @@ def _classify_bottleneck(
     return "mixed", 0.5, f"CPU {cpu:.0f}%, GPU {gpu:.0f}%, disk {disk:.0f}%"
 
 
-def collect_and_store(*, retention_days: int | None = None) -> MetricSnapshot:
-    raw = collect_raw_metrics()
+def _parse_collected_at(value: Any) -> datetime:
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        dt = parse_datetime(str(value)) if value else None
+    if dt is None:
+        return timezone.now()
+    if timezone.is_naive(dt):
+        return timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt
+
+
+def _normalize_raw_metrics(raw: dict[str, Any]) -> dict[str, Any]:
+    raw = dict(raw or {})
+    disks = raw.get("disks") or []
+    gpus = raw.get("gpus") or []
+    normalized_disks: list[dict[str, Any]] = []
+    for disk in disks:
+        if not isinstance(disk, dict):
+            continue
+        device = str(disk.get("device", "")).strip()
+        if not device:
+            continue
+        normalized_disks.append(
+            {
+                "device": device[:64],
+                "read_bytes_total": _to_int(disk.get("read_bytes_total", 0)),
+                "write_bytes_total": _to_int(disk.get("write_bytes_total", 0)),
+                "read_count_total": _to_int(disk.get("read_count_total", 0)),
+                "write_count_total": _to_int(disk.get("write_count_total", 0)),
+                "busy_time_ms_total": _to_int(disk.get("busy_time_ms_total", 0)),
+            }
+        )
+
+    normalized_gpus: list[dict[str, Any]] = []
+    for gpu in gpus:
+        if not isinstance(gpu, dict):
+            continue
+        normalized_gpus.append(
+            {
+                "gpu_index": _to_int(gpu.get("gpu_index", 0)),
+                "name": str(gpu.get("name", "GPU"))[:200],
+                "uuid": str(gpu.get("uuid", ""))[:128],
+                "utilization_gpu_percent": _to_float(gpu.get("utilization_gpu_percent")),
+                "utilization_memory_percent": _to_float(gpu.get("utilization_memory_percent")),
+                "memory_total_bytes": _to_int(gpu.get("memory_total_bytes", 0)),
+                "memory_used_bytes": _to_int(gpu.get("memory_used_bytes", 0)),
+                "memory_percent": _to_float(gpu.get("memory_percent")),
+                "temperature_c": _to_float(gpu.get("temperature_c")),
+                "power_w": _to_float(gpu.get("power_w")),
+                "power_limit_w": _to_float(gpu.get("power_limit_w")),
+            }
+        )
+
+    return {
+        "collected_at": _parse_collected_at(raw.get("collected_at")),
+        "cpu_usage_percent": _to_float(raw.get("cpu_usage_percent")) or 0.0,
+        "cpu_user_percent": _to_float(raw.get("cpu_user_percent")),
+        "cpu_system_percent": _to_float(raw.get("cpu_system_percent")),
+        "cpu_iowait_percent": _to_float(raw.get("cpu_iowait_percent")),
+        "cpu_load_1": _to_float(raw.get("cpu_load_1")),
+        "cpu_load_5": _to_float(raw.get("cpu_load_5")),
+        "cpu_load_15": _to_float(raw.get("cpu_load_15")),
+        "cpu_frequency_mhz": _to_float(raw.get("cpu_frequency_mhz")),
+        "cpu_count_logical": _to_int(raw.get("cpu_count_logical", 0)),
+        "cpu_count_physical": _to_int(raw.get("cpu_count_physical", 0)) or None,
+        "memory_total_bytes": _to_int(raw.get("memory_total_bytes", 0)),
+        "memory_used_bytes": _to_int(raw.get("memory_used_bytes", 0)),
+        "memory_available_bytes": _to_int(raw.get("memory_available_bytes", 0)),
+        "memory_percent": _to_float(raw.get("memory_percent")) or 0.0,
+        "swap_total_bytes": _to_int(raw.get("swap_total_bytes", 0)),
+        "swap_used_bytes": _to_int(raw.get("swap_used_bytes", 0)),
+        "swap_percent": _to_float(raw.get("swap_percent")) or 0.0,
+        "network_rx_bytes_total": _to_int(raw.get("network_rx_bytes_total", 0)),
+        "network_tx_bytes_total": _to_int(raw.get("network_tx_bytes_total", 0)),
+        "process_count": _to_int(raw.get("process_count", 0)),
+        "disks": normalized_disks,
+        "gpus": normalized_gpus,
+    }
+
+
+def store_raw_metrics_for_server(
+    server: MonitoredServer,
+    raw_metrics: dict[str, Any],
+    *,
+    retention_days: int | None = None,
+) -> MetricSnapshot:
+    raw = _normalize_raw_metrics(raw_metrics)
 
     previous = (
-        MetricSnapshot.objects.order_by("-collected_at")
+        MetricSnapshot.objects.filter(server=server)
+        .order_by("-collected_at")
         .prefetch_related("disks")
         .first()
     )
@@ -463,6 +552,7 @@ def collect_and_store(*, retention_days: int | None = None) -> MetricSnapshot:
 
     with transaction.atomic():
         snapshot = MetricSnapshot.objects.create(
+            server=server,
             collected_at=raw["collected_at"],
             interval_seconds=interval_seconds,
             cpu_usage_percent=raw["cpu_usage_percent"],
@@ -532,6 +622,85 @@ def collect_and_store(*, retention_days: int | None = None) -> MetricSnapshot:
         days = settings.MONITORING_RETENTION_DAYS if retention_days is None else retention_days
         if days and days > 0:
             cutoff = raw["collected_at"] - timedelta(days=days)
-            MetricSnapshot.objects.filter(collected_at__lt=cutoff).delete()
+            MetricSnapshot.objects.filter(server=server, collected_at__lt=cutoff).delete()
 
+    return snapshot
+
+
+def _update_server_heartbeat(
+    server: MonitoredServer,
+    *,
+    collected_at: datetime | None = None,
+    source_ip: str | None = None,
+    agent_info: dict[str, Any] | None = None,
+) -> None:
+    updates: list[str] = []
+    if collected_at and server.last_seen_at != collected_at:
+        server.last_seen_at = collected_at
+        updates.append("last_seen_at")
+    if source_ip and server.last_ip != source_ip:
+        server.last_ip = source_ip
+        updates.append("last_ip")
+    if agent_info:
+        hostname = str(agent_info.get("hostname", "") or "")[:255]
+        agent_version = str(agent_info.get("version", "") or "")[:64]
+        if hostname and server.hostname != hostname:
+            server.hostname = hostname
+            updates.append("hostname")
+        if agent_version and server.last_agent_version != agent_version:
+            server.last_agent_version = agent_version
+            updates.append("last_agent_version")
+        # Keep a compact copy of agent metadata for troubleshooting.
+        sanitized = {str(k)[:64]: agent_info[k] for k in list(agent_info.keys())[:25]}
+        if sanitized != (server.agent_info or {}):
+            server.agent_info = sanitized
+            updates.append("agent_info")
+    if updates:
+        server.save(update_fields=list(dict.fromkeys(updates + ["updated_at"])))
+
+
+def ingest_sample_for_server(
+    server: MonitoredServer,
+    payload: dict[str, Any],
+    *,
+    source_ip: str | None = None,
+) -> MetricSnapshot:
+    sample = payload.get("sample") if isinstance(payload, dict) else None
+    if not isinstance(sample, dict):
+        sample = payload if isinstance(payload, dict) else {}
+    agent_info = payload.get("agent") if isinstance(payload, dict) and isinstance(payload.get("agent"), dict) else {}
+    retention_days = payload.get("retention_days") if isinstance(payload, dict) else None
+    if not isinstance(retention_days, int):
+        retention_days = None
+
+    snapshot = store_raw_metrics_for_server(server, sample, retention_days=retention_days)
+    _update_server_heartbeat(
+        server,
+        collected_at=snapshot.collected_at,
+        source_ip=source_ip,
+        agent_info=agent_info,
+    )
+    return snapshot
+
+
+def _get_or_create_local_server() -> MonitoredServer:
+    slug = os.environ.get("MONITORING_LOCAL_SERVER_SLUG", "local")
+    name = os.environ.get("MONITORING_LOCAL_SERVER_NAME", "Local Host")
+    hostname = socket.gethostname()
+    return MonitoredServer.ensure_local_server(slug=slug, name=name, hostname=hostname)
+
+
+def collect_and_store(
+    *,
+    retention_days: int | None = None,
+    server: MonitoredServer | None = None,
+) -> MetricSnapshot:
+    target_server = server or _get_or_create_local_server()
+    raw = collect_raw_metrics()
+    snapshot = store_raw_metrics_for_server(target_server, raw, retention_days=retention_days)
+    _update_server_heartbeat(
+        target_server,
+        collected_at=snapshot.collected_at,
+        agent_info={"hostname": socket.gethostname(), "version": "django-local-collector"},
+    )
     return snapshot

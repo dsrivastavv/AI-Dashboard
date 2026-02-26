@@ -1,25 +1,80 @@
 from __future__ import annotations
 
+import json
 import math
 from datetime import timedelta
 from typing import Any
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
-from django.conf import settings
+from django.db.models import Count, Max
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
 
 from monitoring.auth import is_google_email_allowlisted
-from monitoring.models import MetricSnapshot
-from monitoring.services.collector import collect_and_store
+from monitoring.models import MetricSnapshot, MonitoredServer
+from monitoring.services.collector import ingest_sample_for_server
 
 
 def _label_to_title(label: str) -> str:
     return label.replace("-", " ").replace("_", " ").title()
+
+
+def _server_queryset():
+    return (
+        MonitoredServer.objects.filter(is_active=True)
+        .annotate(
+            snapshot_count=Count("snapshots"),
+            latest_snapshot_at=Max("snapshots__collected_at"),
+        )
+        .order_by("-latest_snapshot_at", "-last_seen_at", "name", "slug")
+    )
+
+
+def _serialize_server(server: MonitoredServer) -> dict[str, Any]:
+    return {
+        "id": server.id,
+        "slug": server.slug,
+        "name": server.name,
+        "hostname": server.hostname,
+        "description": server.description,
+        "is_active": server.is_active,
+        "last_seen_at": server.last_seen_at.isoformat() if server.last_seen_at else None,
+        "last_agent_version": server.last_agent_version or "",
+        "snapshot_count": getattr(server, "snapshot_count", None),
+        "latest_snapshot_at": (
+            getattr(server, "latest_snapshot_at").isoformat()
+            if getattr(server, "latest_snapshot_at", None)
+            else None
+        ),
+    }
+
+
+def _pick_server(servers: list[MonitoredServer], server_param: str | None) -> MonitoredServer | None:
+    if not servers:
+        return None
+
+    normalized = (server_param or "").strip()
+    if normalized:
+        if normalized.isdigit():
+            target_id = int(normalized)
+            for server in servers:
+                if server.id == target_id:
+                    return server
+        else:
+            for server in servers:
+                if server.slug == normalized:
+                    return server
+
+    for server in servers:
+        if getattr(server, "snapshot_count", 0):
+            return server
+    return servers[0]
 
 
 def _serialize_snapshot(snapshot: MetricSnapshot) -> dict[str, Any]:
@@ -55,6 +110,7 @@ def _serialize_snapshot(snapshot: MetricSnapshot) -> dict[str, Any]:
     ]
     return {
         "id": snapshot.id,
+        "server": _serialize_server(snapshot.server) if snapshot.server_id and snapshot.server else None,
         "collected_at": snapshot.collected_at.isoformat(),
         "age_seconds": max(0.0, (now - snapshot.collected_at).total_seconds()),
         "interval_seconds": snapshot.interval_seconds,
@@ -134,8 +190,15 @@ def _deny_if_not_allowlisted(request, *, api: bool = False):
     return redirect("monitoring:access_denied")
 
 
-@login_required
+def _selected_server_and_list(request) -> tuple[MonitoredServer | None, list[MonitoredServer]]:
+    servers = list(_server_queryset())
+    selected = _pick_server(servers, request.GET.get("server"))
+    return selected, servers
+
+
 def dashboard(request):
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next={request.path}")
     denied = _deny_if_not_allowlisted(request, api=False)
     if denied is not None:
         return denied
@@ -163,30 +226,62 @@ def access_denied(request):
 
 @require_GET
 @login_required
+def api_servers(request):
+    denied = _deny_if_not_allowlisted(request, api=True)
+    if denied is not None:
+        return denied
+    servers = list(_server_queryset())
+    return JsonResponse(
+        {
+            "ok": True,
+            "servers": [_serialize_server(server) for server in servers],
+        }
+    )
+
+
+@require_GET
+@login_required
 def api_metrics_latest(request):
     denied = _deny_if_not_allowlisted(request, api=True)
     if denied is not None:
         return denied
+
+    selected_server, servers = _selected_server_and_list(request)
+    if selected_server is None:
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "No monitored servers registered yet. Register a server and start an agent.",
+                "servers": [],
+            },
+            status=404,
+        )
+
     snapshot = (
-        MetricSnapshot.objects.order_by("-collected_at")
-        .prefetch_related("gpus", "disks")
+        MetricSnapshot.objects.filter(server=selected_server)
+        .order_by("-collected_at")
+        .prefetch_related("gpus", "disks", "server")
         .first()
     )
     if snapshot is None:
-        try:
-            collect_and_store()
-            snapshot = (
-                MetricSnapshot.objects.order_by("-collected_at")
-                .prefetch_related("gpus", "disks")
-                .first()
-            )
-        except Exception as exc:  # pragma: no cover - defensive path
-            return JsonResponse({"ok": False, "error": str(exc)}, status=500)
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": f"No samples collected yet for server '{selected_server.slug}'.",
+                "servers": [_serialize_server(server) for server in servers],
+                "selected_server": _serialize_server(selected_server),
+            },
+            status=404,
+        )
 
-    if snapshot is None:
-        return JsonResponse({"ok": False, "error": "No samples collected yet."}, status=404)
-
-    return JsonResponse({"ok": True, "snapshot": _serialize_snapshot(snapshot)})
+    return JsonResponse(
+        {
+            "ok": True,
+            "servers": [_serialize_server(server) for server in servers],
+            "selected_server": _serialize_server(selected_server),
+            "snapshot": _serialize_snapshot(snapshot),
+        }
+    )
 
 
 @require_GET
@@ -195,6 +290,21 @@ def api_metrics_history(request):
     denied = _deny_if_not_allowlisted(request, api=True)
     if denied is not None:
         return denied
+
+    selected_server, servers = _selected_server_and_list(request)
+    if selected_server is None:
+        return JsonResponse(
+            {
+                "ok": True,
+                "minutes": 0,
+                "point_count": 0,
+                "stride": 1,
+                "servers": [],
+                "selected_server": None,
+                "points": [],
+            }
+        )
+
     try:
         minutes = int(request.GET.get("minutes", settings.MONITORING_DEFAULT_HISTORY_MINUTES))
     except ValueError:
@@ -203,7 +313,7 @@ def api_metrics_history(request):
     minutes = max(1, min(minutes, settings.MONITORING_MAX_HISTORY_MINUTES))
     since = timezone.now() - timedelta(minutes=minutes)
     snapshots = list(
-        MetricSnapshot.objects.filter(collected_at__gte=since)
+        MetricSnapshot.objects.filter(server=selected_server, collected_at__gte=since)
         .order_by("collected_at")
         .prefetch_related("gpus", "disks")
     )
@@ -260,6 +370,68 @@ def api_metrics_history(request):
             "minutes": minutes,
             "point_count": len(points),
             "stride": stride,
+            "servers": [_serialize_server(server) for server in servers],
+            "selected_server": _serialize_server(selected_server),
             "points": points,
+        }
+    )
+
+
+def _extract_ingest_token(request) -> str:
+    direct = (request.headers.get("X-Monitoring-Token") or "").strip()
+    if direct:
+        return direct
+    authz = (request.headers.get("Authorization") or "").strip()
+    if authz.lower().startswith("bearer "):
+        return authz[7:].strip()
+    return ""
+
+
+def _request_ip(request) -> str | None:
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if forwarded:
+        first = forwarded.split(",")[0].strip()
+        if first:
+            return first
+    addr = (request.META.get("REMOTE_ADDR") or "").strip()
+    return addr or None
+
+
+@csrf_exempt
+@require_POST
+def api_ingest_server_metrics(request, server_slug: str):
+    server = get_object_or_404(MonitoredServer, slug=server_slug)
+    if not server.is_active:
+        return JsonResponse({"ok": False, "error": "Server is disabled."}, status=403)
+
+    token = _extract_ingest_token(request)
+    if not server.check_api_token(token):
+        return JsonResponse({"ok": False, "error": "Invalid ingest token."}, status=401)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse({"ok": False, "error": "Invalid JSON payload."}, status=400)
+
+    if not isinstance(payload, dict):
+        return JsonResponse({"ok": False, "error": "Payload must be a JSON object."}, status=400)
+
+    try:
+        snapshot = ingest_sample_for_server(server, payload, source_ip=_request_ip(request))
+    except Exception as exc:  # pragma: no cover - defensive API path
+        return JsonResponse({"ok": False, "error": f"Ingest failed: {exc}"}, status=400)
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "server": _serialize_server(server),
+            "snapshot": {
+                "id": snapshot.id,
+                "collected_at": snapshot.collected_at.isoformat(),
+                "bottleneck": snapshot.bottleneck,
+                "cpu_usage_percent": snapshot.cpu_usage_percent,
+                "top_gpu_util_percent": snapshot.top_gpu_util_percent,
+                "disk_util_percent": snapshot.disk_util_percent,
+            },
         }
     )
