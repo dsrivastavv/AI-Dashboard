@@ -1,11 +1,14 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 
 import AuthGate from '../components/auth/AuthGate';
 import BottleneckPanel from '../components/dashboard/BottleneckPanel';
+import CompactStatsPanel from '../components/dashboard/CompactStatsPanel';
+import DashboardSidebar, { type DashboardThemeMode } from '../components/dashboard/DashboardSidebar';
 import DiskTable from '../components/dashboard/DiskTable';
 import GpuTable from '../components/dashboard/GpuTable';
 import HistoryCharts from '../components/dashboard/HistoryCharts';
+import ResourceRadarPanel from '../components/dashboard/ResourceRadarPanel';
 import ServerSelector from '../components/dashboard/ServerSelector';
 import SummaryCards from '../components/dashboard/SummaryCards';
 import TimeRangeSelector from '../components/dashboard/TimeRangeSelector';
@@ -16,6 +19,28 @@ import AppShell from '../components/layout/AppShell';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { buildNextPath, parseDashboardMinutes, parseServerParam, withDashboardQuery } from '../lib/query';
 
+function formatSyncTime(timestamp: number | null) {
+  if (!timestamp) {
+    return 'Pending';
+  }
+  return new Date(timestamp).toLocaleTimeString();
+}
+
+function getInitialThemeMode(): DashboardThemeMode {
+  if (typeof window === 'undefined') {
+    return 'light';
+  }
+
+  const stored = window.localStorage.getItem('ai-dashboard-theme');
+  if (stored === 'dark' || stored === 'light') {
+    return stored;
+  }
+
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'dark';
+}
+
 export default function DashboardPage() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,8 +49,11 @@ export default function DashboardPage() {
   const requestedServer = parseServerParam(searchParams.get('server'));
   const minutes = parseDashboardMinutes(searchParams.get('minutes'));
   const nextPath = buildNextPath(location.pathname, location.search);
+  const [liveRefreshEnabled, setLiveRefreshEnabled] = useState(true);
+  const [themeMode, setThemeMode] = useState<DashboardThemeMode>(getInitialThemeMode);
+  const [settingsOpen, setSettingsOpen] = useState(true);
 
-  const data = useDashboardData({ server: requestedServer, minutes });
+  const data = useDashboardData({ server: requestedServer, minutes, liveRefreshEnabled });
 
   const selectedServerSlug = data.selectedServer?.slug ?? requestedServer;
 
@@ -37,8 +65,19 @@ export default function DashboardPage() {
     setSearchParams(next, { replace: true });
   }, [data.selectedServer?.slug, requestedServer, searchParams, setSearchParams]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.theme = themeMode;
+    window.localStorage.setItem('ai-dashboard-theme', themeMode);
+
+    return () => {
+      delete root.dataset.theme;
+    };
+  }, [themeMode]);
+
   const latestNotFound = data.latest.notFound;
   const latestSnapshot = data.latest.data?.snapshot ?? null;
+  const historyPoints = data.history.data?.points ?? [];
 
   const noServers = !latestSnapshot && Boolean(latestNotFound) && (data.servers.length === 0);
   const noSnapshotsYet = !latestSnapshot && Boolean(latestNotFound) && !noServers;
@@ -53,10 +92,27 @@ export default function DashboardPage() {
 
   const headerActions = useMemo(
     () => (
-      <div className="card shadow-sm border-0">
-        <div className="card-body p-3">
+      <div className="control-surface">
+        <div className="control-surface-top">
+          <div className="live-status-block">
+            <div className="live-status-pill">
+              <span className={`live-dot ${liveRefreshEnabled ? 'is-live' : 'is-paused'}`} aria-hidden="true" />
+              <span>{liveRefreshEnabled ? 'Live auto refresh enabled' : 'Live auto refresh paused'}</span>
+            </div>
+            <div className="live-status-meta">
+              Latest sync {formatSyncTime(data.lastLatestSuccessAt)} | History sync {formatSyncTime(data.lastHistorySuccessAt)}
+            </div>
+          </div>
+          <div className="header-side-note">Use the sidebar for theme, settings, and session controls.</div>
+        </div>
+
+        <div className="control-support-note">
+          Support: contact your dashboard administrator for allowlist access, OAuth setup, or server registration help.
+        </div>
+
+        <div className="control-surface-body">
           <div className="row g-2 align-items-end">
-            <div className="col-12 col-lg-5">
+            <div className="col-12 col-xl-5">
               <ServerSelector
                 servers={data.servers}
                 value={selectedServerSlug ?? null}
@@ -67,7 +123,7 @@ export default function DashboardPage() {
                 disabled={data.isInitialLoading}
               />
             </div>
-            <div className="col-12 col-lg-4">
+            <div className="col-12 col-xl-4">
               <TimeRangeSelector
                 value={minutes}
                 onChange={(value) => {
@@ -77,10 +133,10 @@ export default function DashboardPage() {
                 disabled={data.isInitialLoading}
               />
             </div>
-            <div className="col-12 col-lg-3 d-flex gap-2">
+            <div className="col-12 col-xl-3 d-flex gap-2">
               <button
                 type="button"
-                className="btn btn-outline-secondary flex-grow-1"
+                className="btn btn-dark flex-grow-1 refresh-btn"
                 onClick={() => {
                   void data.refreshAll();
                 }}
@@ -88,15 +144,46 @@ export default function DashboardPage() {
               >
                 {data.isRefreshing ? 'Refreshing...' : 'Refresh'}
               </button>
-              <a className="btn btn-outline-dark" href="/accounts/logout/">
-                Sign out
-              </a>
             </div>
           </div>
         </div>
       </div>
     ),
-    [data, minutes, searchParams, selectedServerSlug, setSearchParams],
+    [
+      data,
+      liveRefreshEnabled,
+      minutes,
+      searchParams,
+      selectedServerSlug,
+      setSearchParams,
+    ],
+  );
+
+  const sidebar = useMemo(
+    () => (
+      <DashboardSidebar
+        themeMode={themeMode}
+        onThemeModeChange={setThemeMode}
+        liveRefreshEnabled={liveRefreshEnabled}
+        onLiveRefreshChange={setLiveRefreshEnabled}
+        isRefreshing={data.isRefreshing}
+        onRefresh={() => {
+          void data.refreshAll();
+        }}
+        latestSyncLabel={formatSyncTime(data.lastLatestSuccessAt)}
+        historySyncLabel={formatSyncTime(data.lastHistorySuccessAt)}
+        selectedServerName={data.selectedServer?.name ?? null}
+        selectedServerSlug={data.selectedServer?.slug ?? null}
+        settingsOpen={settingsOpen}
+        onToggleSettings={() => setSettingsOpen((current) => !current)}
+      />
+    ),
+    [
+      data,
+      liveRefreshEnabled,
+      settingsOpen,
+      themeMode,
+    ],
   );
 
   if (accessDeniedFromQuery) {
@@ -116,7 +203,13 @@ export default function DashboardPage() {
 
   if (data.isInitialLoading) {
     return (
-      <AppShell title="Dashboard" subtitle="Loading server metrics..." headerActions={headerActions}>
+      <AppShell
+        title="Operations Center"
+        subtitle="Loading live AI system metrics..."
+        headerActions={headerActions}
+        sidebar={sidebar}
+        themeMode={themeMode}
+      >
         <LoadingState />
       </AppShell>
     );
@@ -124,13 +217,15 @@ export default function DashboardPage() {
 
   return (
     <AppShell
-      title="Dashboard"
+      title="AI Dashboard"
       subtitle={
         data.selectedServer
           ? `${data.selectedServer.name} (${data.selectedServer.slug})`
-          : 'Google-authenticated monitoring dashboard powered by Django APIs.'
+          : 'Designed by Divyansh Srivastava for secure, live infrastructure monitoring.'
       }
       headerActions={headerActions}
+      sidebar={sidebar}
+      themeMode={themeMode}
     >
       <div className="d-flex flex-column gap-3">
         {data.accessDenied ? (
@@ -139,7 +234,7 @@ export default function DashboardPage() {
             message="Your Google account is signed in but not allowlisted for this dashboard."
             actions={
               <div className="d-flex gap-2">
-                <a className="btn btn-outline-dark btn-sm" href="/accounts/logout/">
+                <a className="btn btn-outline-dark btn-sm" href="/accounts/logout/?next=/login">
                   Sign out
                 </a>
                 <a className="btn btn-primary btn-sm" href="/accounts/google/login/">
@@ -186,14 +281,41 @@ export default function DashboardPage() {
           <>
             <SummaryCards snapshot={latestSnapshot} />
 
+            <div className="row g-3 dashboard-scene-grid">
+              <div className="col-12 col-xxl-8">
+                {data.history.data ? (
+                  <HistoryCharts points={historyPoints} themeMode={themeMode} variant="overview" />
+                ) : (
+                  <ErrorState
+                    title="History unavailable"
+                    message="Could not load historical data for the selected time window."
+                    actions={
+                      <button type="button" className="btn btn-primary btn-sm" onClick={() => void data.refreshHistory()}>
+                        Retry history
+                      </button>
+                    }
+                  />
+                )}
+              </div>
+              <div className="col-12 col-xxl-4 d-flex flex-column gap-3">
+                <ResourceRadarPanel snapshot={latestSnapshot} historyPoints={historyPoints} themeMode={themeMode} />
+                <CompactStatsPanel snapshot={latestSnapshot} />
+              </div>
+            </div>
+
             <div className="row g-3">
               <div className="col-12 col-xl-5">
                 <BottleneckPanel bottleneck={latestSnapshot.bottleneck} />
               </div>
               <div className="col-12 col-xl-7">
-                <div className="card shadow-sm border-0 h-100">
+                <div className="card shadow-sm border-0 h-100 panel-card detail-panel">
                   <div className="card-body">
-                    <h2 className="h6 mb-3">Latest Sample Details</h2>
+                    <div className="panel-head d-flex justify-content-between align-items-center mb-3">
+                      <h2 className="h6 mb-0 panel-title">Latest Sample Details</h2>
+                      <span className="small panel-caption">
+                        {liveRefreshEnabled ? 'Auto refresh active' : 'Manual refresh mode'}
+                      </span>
+                    </div>
                     <div className="row g-3 small">
                       <div className="col-6 col-md-4">
                         <div className="text-body-secondary">Processes</div>
@@ -234,8 +356,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-
-            {data.history.data ? <HistoryCharts points={data.history.data.points} /> : null}
 
             <div className="row g-3">
               <div className="col-12 col-xxl-7">

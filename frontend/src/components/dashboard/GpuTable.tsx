@@ -14,14 +14,14 @@ export default function GpuTable({ gpus }: GpuTableProps) {
   }
 
   return (
-    <div className="card shadow-sm border-0 h-100">
+    <div className="card shadow-sm border-0 h-100 panel-card table-panel">
       <div className="card-body p-0">
-        <div className="p-3 border-bottom">
-          <h2 className="h6 mb-0">GPU Devices</h2>
+        <div className="p-3 border-bottom table-panel-head">
+          <h2 className="h6 mb-0 panel-title">GPU Devices</h2>
         </div>
         <div className="table-responsive">
-          <table className="table table-sm align-middle mb-0">
-            <thead className="table-light">
+          <table className="table table-sm align-middle mb-0 dashboard-table">
+            <thead>
               <tr>
                 <th scope="col">#</th>
                 <th scope="col">Name</th>

@@ -1,0 +1,35 @@
+<svg width="960" height="420" viewBox="0 0 960 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wavebg" x1="0" y1="0" x2="960" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A1330"/>
+      <stop offset="1" stop-color="#101A41"/>
+    </linearGradient>
+    <linearGradient id="waveline" x1="75" y1="90" x2="880" y2="336" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#32D4FF"/>
+      <stop offset="0.45" stop-color="#74D8A8"/>
+      <stop offset="1" stop-color="#F7C86B"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="420" rx="24" fill="url(#wavebg)"/>
+  <g opacity="0.15" stroke="#A4C8FF">
+    <path d="M0 70H960"/>
+    <path d="M0 140H960"/>
+    <path d="M0 210H960"/>
+    <path d="M0 280H960"/>
+    <path d="M0 350H960"/>
+    <path d="M80 0V420"/>
+    <path d="M240 0V420"/>
+    <path d="M400 0V420"/>
+    <path d="M560 0V420"/>
+    <path d="M720 0V420"/>
+    <path d="M880 0V420"/>
+  </g>
+  <path d="M54 255C112 255 135 118 196 118C257 118 274 296 336 296C398 296 414 168 476 168C536 168 555 321 619 321C681 321 696 102 761 102C824 102 843 255 905 255" stroke="url(#waveline)" stroke-width="10" stroke-linecap="round"/>
+  <g fill="#E9FAFF">
+    <circle cx="196" cy="118" r="10"/>
+    <circle cx="336" cy="296" r="10"/>
+    <circle cx="476" cy="168" r="10"/>
+    <circle cx="619" cy="321" r="10"/>
+    <circle cx="761" cy="102" r="10"/>
+  </g>
+</svg>

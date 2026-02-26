@@ -25,20 +25,32 @@ function bottleneckBadgeClass(label: string) {
 }
 
 export default function BottleneckPanel({ bottleneck }: BottleneckPanelProps) {
+  const confidencePercent = Math.max(0, Math.min(100, Math.round(bottleneck.confidence * 100)));
+
   return (
-    <div className="card shadow-sm border-0 h-100">
-      <div className="card-body">
-        <div className="d-flex align-items-center gap-2 mb-3">
-          <span className={`badge ${bottleneckBadgeClass(bottleneck.label)}`}>
+    <div className="card shadow-sm border-0 h-100 panel-card bottleneck-panel">
+      <div className="card-body p-4">
+        <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <span className={`badge ${bottleneckBadgeClass(bottleneck.label)} px-3 py-2 rounded-pill`}>
             {bottleneck.title || formatLabel(bottleneck.label)}
           </span>
-          <span className="text-body-secondary small">
-            Confidence {(bottleneck.confidence * 100).toFixed(0)}%
+          <span className="text-body-secondary small fw-semibold">
+            Confidence {confidencePercent}%
           </span>
         </div>
-        <p className="mb-0 text-body-secondary">
+
+        <div className="confidence-track mb-3" aria-hidden="true">
+          <div className="confidence-fill" style={{ width: `${confidencePercent}%` }} />
+        </div>
+
+        <p className="mb-3 text-body-secondary bottleneck-reason">
           {bottleneck.reason || 'No bottleneck reason provided for this sample.'}
         </p>
+
+        <div className="d-flex flex-wrap gap-2">
+          <span className="metric-hint-badge">Heuristic classification</span>
+          <span className="metric-hint-badge metric-hint-badge--soft">Triage signal only</span>
+        </div>
       </div>
     </div>
   );

@@ -13,13 +13,13 @@ export default function TimeRangeSelector({
 }: TimeRangeSelectorProps) {
   return (
     <div>
-      <label className="form-label small text-body-secondary mb-1">History</label>
-      <div className="btn-group d-flex" role="group" aria-label="History range selector">
+      <label className="form-label small text-body-secondary mb-1 control-label">History</label>
+      <div className="btn-group d-flex range-group" role="group" aria-label="History range selector">
         {TIME_RANGE_OPTIONS.map((option) => (
           <button
             key={option.minutes}
             type="button"
-            className={`btn btn-sm ${value === option.minutes ? 'btn-primary' : 'btn-outline-secondary'}`}
+            className={`btn btn-sm ${value === option.minutes ? 'btn-primary range-btn-active' : 'btn-outline-secondary range-btn'}`}
             onClick={() => onChange(option.minutes)}
             disabled={disabled}
           >

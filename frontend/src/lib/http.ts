@@ -60,6 +60,7 @@ export async function requestJson<T>(input: RequestInfo | URL, init: RequestInit
     response = await fetch(input, {
       credentials: 'include',
       ...init,
+      cache: init.cache ?? 'no-store',
       headers,
     });
   } catch (error) {

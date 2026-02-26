@@ -79,10 +79,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-vh-100 login-bg d-flex align-items-center py-5">
-      <div className="container">
+    <div className="min-vh-100 login-bg d-flex align-items-center py-4 py-lg-5 login-page-shell">
+      <div className="container-xl">
         <div className="row justify-content-center">
-          <div className="col-12 col-md-10 col-lg-6 col-xl-5">
+          <div className="col-12 col-xl-10">
             {probeError ? (
               <div className="mb-3">
                 <ErrorState

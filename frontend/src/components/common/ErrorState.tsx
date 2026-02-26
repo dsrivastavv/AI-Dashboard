@@ -8,7 +8,7 @@ interface ErrorStateProps {
 
 export default function ErrorState({ title = 'Something went wrong', message, actions }: ErrorStateProps) {
   return (
-    <div className="card shadow-sm border-0">
+    <div className="card shadow-sm border-0 panel-card state-card state-card--error">
       <div className="card-body p-4">
         <h2 className="h5 mb-2">{title}</h2>
         <p className="text-body-secondary mb-3">{message}</p>

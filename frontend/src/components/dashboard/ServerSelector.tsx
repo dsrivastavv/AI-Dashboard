@@ -15,12 +15,12 @@ export default function ServerSelector({
 }: ServerSelectorProps) {
   return (
     <div>
-      <label htmlFor="server-selector" className="form-label small text-body-secondary mb-1">
+      <label htmlFor="server-selector" className="form-label small text-body-secondary mb-1 control-label">
         Server
       </label>
       <select
         id="server-selector"
-        className="form-select"
+        className="form-select control-select"
         value={value ?? ''}
         disabled={disabled || servers.length === 0}
         onChange={(event) => onChange(event.target.value || null)}

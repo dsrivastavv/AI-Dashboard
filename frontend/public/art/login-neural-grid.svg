@@ -1,0 +1,43 @@
+<svg width="960" height="640" viewBox="0 0 960 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="960" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#071228"/>
+      <stop offset="0.55" stop-color="#12244F"/>
+      <stop offset="1" stop-color="#182C63"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(240 160) rotate(90) scale(220 280)">
+      <stop stop-color="#34D3FF" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#34D3FF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(720 420) rotate(90) scale(220 300)">
+      <stop stop-color="#7C5CFF" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#7C5CFF" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" stroke="#8EC5FF" stroke-opacity="0.12"/>
+    </pattern>
+  </defs>
+  <rect width="960" height="640" rx="28" fill="url(#bg)"/>
+  <rect width="960" height="640" rx="28" fill="url(#grid)"/>
+  <rect width="960" height="640" rx="28" fill="url(#glow1)"/>
+  <rect width="960" height="640" rx="28" fill="url(#glow2)"/>
+  <g stroke="#BDE8FF" stroke-opacity="0.25" stroke-width="2">
+    <path d="M106 486C184 392 246 349 347 325C473 295 552 340 638 286C720 235 792 132 858 116"/>
+    <path d="M82 188C195 214 263 263 338 268C432 275 495 226 585 236C684 247 741 320 874 333"/>
+    <path d="M147 569C262 549 319 510 381 461C452 404 510 360 609 372C709 384 770 455 828 509"/>
+  </g>
+  <g>
+    <circle cx="142" cy="184" r="9" fill="#33D2FF"/>
+    <circle cx="336" cy="268" r="10" fill="#87E4FF"/>
+    <circle cx="585" cy="236" r="10" fill="#66C0FF"/>
+    <circle cx="874" cy="333" r="9" fill="#7C5CFF"/>
+    <circle cx="347" cy="325" r="11" fill="#FFD267"/>
+    <circle cx="638" cy="286" r="10" fill="#FF8A5B"/>
+    <circle cx="828" cy="509" r="10" fill="#34D3FF"/>
+    <circle cx="381" cy="461" r="11" fill="#8AF7C1"/>
+  </g>
+  <g fill="#E8F6FF" fill-opacity="0.9" font-family="monospace" font-size="22" letter-spacing="2">
+    <text x="78" y="84">AI DASHBOARD</text>
+    <text x="78" y="118" fill-opacity="0.55" font-size="14">REAL-TIME METRICS SURFACE</text>
+  </g>
+</svg>

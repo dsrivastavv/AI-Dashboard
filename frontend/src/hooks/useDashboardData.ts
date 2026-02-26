@@ -32,6 +32,8 @@ export interface DashboardDataResult {
   accessDenied: boolean;
   isInitialLoading: boolean;
   isRefreshing: boolean;
+  lastLatestSuccessAt: number | null;
+  lastHistorySuccessAt: number | null;
   refreshAll: () => Promise<void>;
   refreshLatest: () => Promise<void>;
   refreshHistory: () => Promise<void>;
@@ -69,8 +71,12 @@ function asLatestNotFoundPayload(value: unknown): LatestSnapshotNotFoundResponse
   return payload as unknown as LatestSnapshotNotFoundResponse;
 }
 
-export function useDashboardData(options: { server: string | null; minutes: number }): DashboardDataResult {
-  const { server, minutes } = options;
+export function useDashboardData(options: {
+  server: string | null;
+  minutes: number;
+  liveRefreshEnabled?: boolean;
+}): DashboardDataResult {
+  const { server, minutes, liveRefreshEnabled = true } = options;
 
   const [latest, setLatest] = useState<LatestState>(() => initialLatestState());
   const [history, setHistory] = useState<EndpointState<HistoryMetricsResponse>>(() => initialHistoryState());
@@ -78,6 +84,8 @@ export function useDashboardData(options: { server: string | null; minutes: numb
   const [authLoginUrl, setAuthLoginUrl] = useState<string | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastLatestSuccessAt, setLastLatestSuccessAt] = useState<number | null>(null);
+  const [lastHistorySuccessAt, setLastHistorySuccessAt] = useState<number | null>(null);
 
   const latestAbortRef = useRef<AbortController | null>(null);
   const historyAbortRef = useRef<AbortController | null>(null);
@@ -127,6 +135,7 @@ export function useDashboardData(options: { server: string | null; minutes: numb
         return;
       }
       clearAuthFlags();
+      setLastLatestSuccessAt(Date.now());
       setLatest({ status: 'success', data: response, error: null, notFound: null });
     } catch (error) {
       if (isAbortError(error) || requestId !== latestRequestIdRef.current) {
@@ -178,6 +187,7 @@ export function useDashboardData(options: { server: string | null; minutes: numb
         return;
       }
       clearAuthFlags();
+      setLastHistorySuccessAt(Date.now());
       setHistory({ status: 'success', data: response, error: null });
     } catch (error) {
       if (isAbortError(error) || requestId !== historyRequestIdRef.current) {
@@ -215,7 +225,7 @@ export function useDashboardData(options: { server: string | null; minutes: numb
       void fetchLatest({ background: true });
     },
     5000,
-    !authRequired && !accessDenied,
+    liveRefreshEnabled && !authRequired && !accessDenied,
   );
 
   usePolling(
@@ -223,7 +233,7 @@ export function useDashboardData(options: { server: string | null; minutes: numb
       void fetchHistory({ background: true });
     },
     30000,
-    !authRequired && !accessDenied,
+    liveRefreshEnabled && !authRequired && !accessDenied,
   );
 
   const servers =
@@ -248,6 +258,8 @@ export function useDashboardData(options: { server: string | null; minutes: numb
     accessDenied,
     isInitialLoading,
     isRefreshing,
+    lastLatestSuccessAt,
+    lastHistorySuccessAt,
     refreshAll: () => refreshAll(),
     refreshLatest: () => fetchLatest(),
     refreshHistory: () => fetchHistory(),
