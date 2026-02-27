@@ -1,8 +1,6 @@
+import { Link, useLocation } from 'react-router-dom';
 import {
   ArrowLeftRight,
-  CheckCircle2,
-  Clock,
-  History,
   LogOut,
   Moon,
   RefreshCw,
@@ -10,9 +8,12 @@ import {
   Server,
   Settings,
   Sun,
+  Terminal,
   User,
   Zap,
 } from 'lucide-react';
+
+import type { ServerSummary } from '../../types/api';
 
 export type DashboardThemeMode = 'light' | 'dark';
 
@@ -21,10 +22,10 @@ interface DashboardSidebarProps {
   onThemeModeChange: (mode: DashboardThemeMode) => void;
   isRefreshing: boolean;
   onRefresh: () => void;
-  latestSyncLabel: string;
-  historySyncLabel: string;
-  selectedServerName?: string | null;
   selectedServerSlug?: string | null;
+  servers: ServerSummary[];
+  onServerChange: (slug: string | null) => void;
+  isServerLoading?: boolean;
 }
 
 export default function DashboardSidebar({
@@ -32,11 +33,13 @@ export default function DashboardSidebar({
   onThemeModeChange,
   isRefreshing,
   onRefresh,
-  latestSyncLabel,
-  historySyncLabel,
-  selectedServerName,
   selectedServerSlug,
+  servers,
+  onServerChange,
+  isServerLoading = false,
 }: DashboardSidebarProps) {
+  const { pathname, search } = useLocation();
+
   return (
     <>
       {/* Brand */}
@@ -53,57 +56,61 @@ export default function DashboardSidebar({
         <div className="sidebar-brand-by">by Divyansh Srivastava</div>
       </div>
 
-      {/* Live status */}
+      {/* Server selector */}
       <div className="sidebar-section">
         <div className="sidebar-section-label">
-          <span className="sidebar-section-icon"><CheckCircle2 size={11} aria-hidden="true" /></span>
-          Live Status
+          <span className="sidebar-section-icon"><Server size={11} aria-hidden="true" /></span>
+          Server
         </div>
-        <div className="sidebar-live-pill">
-          <span className="live-dot is-live" aria-hidden="true" />
-          Auto-refresh active
+        <div className="sidebar-server-select-wrap">
+          <select
+            id="sidebar-server-selector"
+            className="sidebar-server-select"
+            value={selectedServerSlug ?? ''}
+            disabled={isServerLoading || servers.length === 0}
+            onChange={(e) => onServerChange(e.target.value || null)}
+          >
+            {servers.length === 0 ? <option value="">No servers</option> : null}
+            {servers.map((s) => (
+              <option key={s.id} value={s.slug}>
+                {s.name}
+              </option>
+            ))}
+          </select>
         </div>
-        <div className="sidebar-sync-grid">
-          <div className="sidebar-sync-item">
-            <div className="sidebar-sync-label">
-              <Clock size={10} aria-hidden="true" style={{ marginRight: 3, verticalAlign: 'middle' }} />
-              Latest
-            </div>
-            <div className="sidebar-sync-value">{latestSyncLabel}</div>
-          </div>
-          <div className="sidebar-sync-item">
-            <div className="sidebar-sync-label">
-              <History size={10} aria-hidden="true" style={{ marginRight: 3, verticalAlign: 'middle' }} />
-              History
-            </div>
-            <div className="sidebar-sync-value">{historySyncLabel}</div>
-          </div>
-        </div>
-
-        {selectedServerName ? (
-          <div className="sidebar-server-card">
-            <div className="sidebar-server-eyebrow">
-              <Server size={10} aria-hidden="true" style={{ marginRight: 3, verticalAlign: 'middle' }} />
-              Active server
-            </div>
-            <div className="sidebar-server-name">{selectedServerName}</div>
-            {selectedServerSlug ? (
-              <div className="sidebar-server-slug">{selectedServerSlug}</div>
-            ) : null}
-          </div>
-        ) : null}
-
-        <div className="sidebar-subtitle" style={{ marginTop: '12px' }}>Manual refresh</div>
         <button
           type="button"
           className="sidebar-refresh-btn"
+          style={{ marginTop: '10px' }}
           onClick={onRefresh}
           disabled={isRefreshing}
         >
           {isRefreshing
-            ? <><RotateCw size={13} className="sidebar-refresh-spin" aria-hidden="true" /> Wait...</>
+            ? <><RotateCw size={13} className="sidebar-refresh-spin" aria-hidden="true" /> Refreshing...</>
             : <><RefreshCw size={13} aria-hidden="true" /> Refresh</>}
         </button>
+      </div>
+
+      {/* Navigation tabs */}
+      <div className="sidebar-section">
+        <nav className="sidebar-tabs" aria-label="Main navigation">
+          <Link
+            to={{ pathname: '/dashboard', search }}
+            className={`sidebar-tab${pathname === '/dashboard' || pathname === '/' ? ' is-active' : ''}`}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+            </svg>
+            Dashboard
+          </Link>
+          <Link
+            to={{ pathname: '/terminal', search }}
+            className={`sidebar-tab${pathname === '/terminal' ? ' is-active' : ''}`}
+          >
+            <Terminal size={13} aria-hidden="true" />
+            Terminal
+          </Link>
+        </nav>
       </div>
 
       {/* Settings */}
@@ -130,7 +137,6 @@ export default function DashboardSidebar({
             <Moon size={13} aria-hidden="true" /> Dark
           </button>
         </div>
-
       </div>
 
       {/* Spacer */}

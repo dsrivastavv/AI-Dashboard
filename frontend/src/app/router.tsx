@@ -1,7 +1,9 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 
+import AppLayout from '../components/layout/AppLayout';
 import DashboardPage from '../pages/DashboardPage';
 import LoginPage from '../pages/LoginPage';
+import TerminalPage from '../pages/TerminalPage';
 
 export const router = createBrowserRouter([
   {
@@ -13,8 +15,11 @@ export const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
-    path: '/dashboard',
-    element: <DashboardPage />,
+    element: <AppLayout />,
+    children: [
+      { path: '/dashboard', element: <DashboardPage /> },
+      { path: '/terminal', element: <TerminalPage /> },
+    ],
   },
   {
     path: '*',
