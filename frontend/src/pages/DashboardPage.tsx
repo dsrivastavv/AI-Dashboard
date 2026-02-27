@@ -3,15 +3,13 @@ import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 
 import AuthGate from '../components/auth/AuthGate';
 import BottleneckPanel from '../components/dashboard/BottleneckPanel';
-import CompactStatsPanel from '../components/dashboard/CompactStatsPanel';
 import DashboardSidebar, { type DashboardThemeMode } from '../components/dashboard/DashboardSidebar';
 import DiskTable from '../components/dashboard/DiskTable';
 import GpuTable from '../components/dashboard/GpuTable';
 import HistoryCharts from '../components/dashboard/HistoryCharts';
-import ResourceRadarPanel from '../components/dashboard/ResourceRadarPanel';
 import ServerSelector from '../components/dashboard/ServerSelector';
+import SnapshotInsightsPanel from '../components/dashboard/SnapshotInsightsPanel';
 import SummaryCards from '../components/dashboard/SummaryCards';
-import TimeRangeSelector from '../components/dashboard/TimeRangeSelector';
 import EmptyState from '../components/common/EmptyState';
 import ErrorState from '../components/common/ErrorState';
 import LoadingState from '../components/common/LoadingState';
@@ -23,19 +21,17 @@ function formatSyncTime(timestamp: number | null) {
   if (!timestamp) {
     return 'Pending';
   }
-  return new Date(timestamp).toLocaleTimeString();
+  return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 function getInitialThemeMode(): DashboardThemeMode {
   if (typeof window === 'undefined') {
-    return 'light';
+    return 'dark';
   }
-
   const stored = window.localStorage.getItem('ai-dashboard-theme');
   if (stored === 'dark' || stored === 'light') {
     return stored;
   }
-
   return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
     ? 'dark'
     : 'dark';
@@ -47,13 +43,14 @@ export default function DashboardPage() {
 
   const accessDeniedFromQuery = searchParams.get('access_denied') === '1';
   const requestedServer = parseServerParam(searchParams.get('server'));
-  const minutes = parseDashboardMinutes(searchParams.get('minutes'));
+  const legacyMinutes = searchParams.get('minutes');
+  const systemMinutes = parseDashboardMinutes(searchParams.get('system_minutes') ?? legacyMinutes);
+  const ioMinutes = parseDashboardMinutes(searchParams.get('io_minutes') ?? legacyMinutes);
+  const fetchMinutes = Math.max(systemMinutes, ioMinutes);
   const nextPath = buildNextPath(location.pathname, location.search);
-  const [liveRefreshEnabled, setLiveRefreshEnabled] = useState(true);
   const [themeMode, setThemeMode] = useState<DashboardThemeMode>(getInitialThemeMode);
-  const [settingsOpen, setSettingsOpen] = useState(true);
 
-  const data = useDashboardData({ server: requestedServer, minutes, liveRefreshEnabled });
+  const data = useDashboardData({ server: requestedServer, minutes: fetchMinutes, liveRefreshEnabled: true });
 
   const selectedServerSlug = data.selectedServer?.slug ?? requestedServer;
 
@@ -69,7 +66,6 @@ export default function DashboardPage() {
     const root = document.documentElement;
     root.dataset.theme = themeMode;
     window.localStorage.setItem('ai-dashboard-theme', themeMode);
-
     return () => {
       delete root.dataset.theme;
     };
@@ -92,71 +88,19 @@ export default function DashboardPage() {
 
   const headerActions = useMemo(
     () => (
-      <div className="control-surface">
-        <div className="control-surface-top">
-          <div className="live-status-block">
-            <div className="live-status-pill">
-              <span className={`live-dot ${liveRefreshEnabled ? 'is-live' : 'is-paused'}`} aria-hidden="true" />
-              <span>{liveRefreshEnabled ? 'Live auto refresh enabled' : 'Live auto refresh paused'}</span>
-            </div>
-            <div className="live-status-meta">
-              Latest sync {formatSyncTime(data.lastLatestSuccessAt)} | History sync {formatSyncTime(data.lastHistorySuccessAt)}
-            </div>
-          </div>
-          <div className="header-side-note">Use the sidebar for theme, settings, and session controls.</div>
-        </div>
-
-        <div className="control-support-note">
-          Support: contact your dashboard administrator for allowlist access, OAuth setup, or server registration help.
-        </div>
-
-        <div className="control-surface-body">
-          <div className="row g-2 align-items-end">
-            <div className="col-12 col-xl-5">
-              <ServerSelector
-                servers={data.servers}
-                value={selectedServerSlug ?? null}
-                onChange={(value) => {
-                  const next = withDashboardQuery(searchParams, { server: value, accessDenied: false });
-                  setSearchParams(next);
-                }}
-                disabled={data.isInitialLoading}
-              />
-            </div>
-            <div className="col-12 col-xl-4">
-              <TimeRangeSelector
-                value={minutes}
-                onChange={(value) => {
-                  const next = withDashboardQuery(searchParams, { minutes: value, accessDenied: false });
-                  setSearchParams(next);
-                }}
-                disabled={data.isInitialLoading}
-              />
-            </div>
-            <div className="col-12 col-xl-3 d-flex gap-2">
-              <button
-                type="button"
-                className="btn btn-dark flex-grow-1 refresh-btn"
-                onClick={() => {
-                  void data.refreshAll();
-                }}
-                disabled={data.isRefreshing}
-              >
-                {data.isRefreshing ? 'Refreshing...' : 'Refresh'}
-              </button>
-            </div>
-          </div>
-        </div>
+      <div className="topbar-controls">
+        <ServerSelector
+          servers={data.servers}
+          value={selectedServerSlug ?? null}
+          onChange={(value) => {
+            const next = withDashboardQuery(searchParams, { server: value, accessDenied: false });
+            setSearchParams(next);
+          }}
+          disabled={data.isInitialLoading}
+        />
       </div>
     ),
-    [
-      data,
-      liveRefreshEnabled,
-      minutes,
-      searchParams,
-      selectedServerSlug,
-      setSearchParams,
-    ],
+    [data, searchParams, selectedServerSlug, setSearchParams],
   );
 
   const sidebar = useMemo(
@@ -164,26 +108,15 @@ export default function DashboardPage() {
       <DashboardSidebar
         themeMode={themeMode}
         onThemeModeChange={setThemeMode}
-        liveRefreshEnabled={liveRefreshEnabled}
-        onLiveRefreshChange={setLiveRefreshEnabled}
         isRefreshing={data.isRefreshing}
-        onRefresh={() => {
-          void data.refreshAll();
-        }}
+        onRefresh={() => { void data.refreshAll(); }}
         latestSyncLabel={formatSyncTime(data.lastLatestSuccessAt)}
         historySyncLabel={formatSyncTime(data.lastHistorySuccessAt)}
         selectedServerName={data.selectedServer?.name ?? null}
         selectedServerSlug={data.selectedServer?.slug ?? null}
-        settingsOpen={settingsOpen}
-        onToggleSettings={() => setSettingsOpen((current) => !current)}
       />
     ),
-    [
-      data,
-      liveRefreshEnabled,
-      settingsOpen,
-      themeMode,
-    ],
+    [data, themeMode],
   );
 
   if (accessDeniedFromQuery) {
@@ -201,11 +134,16 @@ export default function DashboardPage() {
     );
   }
 
+  const title = data.selectedServer ? data.selectedServer.name : 'Operations Center';
+  const subtitle = data.selectedServer
+    ? `${data.selectedServer.slug} · ${data.selectedServer.hostname ?? ''}`
+    : 'Select a server to begin monitoring';
+
   if (data.isInitialLoading) {
     return (
       <AppShell
         title="Operations Center"
-        subtitle="Loading live AI system metrics..."
+        subtitle="Loading metrics..."
         headerActions={headerActions}
         sidebar={sidebar}
         themeMode={themeMode}
@@ -217,17 +155,13 @@ export default function DashboardPage() {
 
   return (
     <AppShell
-      title="AI Dashboard"
-      subtitle={
-        data.selectedServer
-          ? `${data.selectedServer.name} (${data.selectedServer.slug})`
-          : 'Designed by Divyansh Srivastava for secure, live infrastructure monitoring.'
-      }
+      title={title}
+      subtitle={subtitle}
       headerActions={headerActions}
       sidebar={sidebar}
       themeMode={themeMode}
     >
-      <div className="d-flex flex-column gap-3">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {data.accessDenied ? (
           <ErrorState
             title="Access denied"
@@ -281,16 +215,43 @@ export default function DashboardPage() {
           <>
             <SummaryCards snapshot={latestSnapshot} />
 
-            <div className="row g-3 dashboard-scene-grid">
-              <div className="col-12 col-xxl-8">
+            <div className="row g-3">
+              <div className="col-12 col-xxl-8 d-flex flex-column gap-3">
                 {data.history.data ? (
-                  <HistoryCharts points={historyPoints} themeMode={themeMode} variant="overview" />
+                  <HistoryCharts
+                    points={historyPoints}
+                    systemMinutes={systemMinutes}
+                    ioMinutes={ioMinutes}
+                    onSystemMinutesChange={(value) => {
+                      const next = withDashboardQuery(searchParams, {
+                        systemMinutes: value,
+                        ioMinutes,
+                        accessDenied: false,
+                      });
+                      setSearchParams(next);
+                    }}
+                    onIoMinutesChange={(value) => {
+                      const next = withDashboardQuery(searchParams, {
+                        systemMinutes,
+                        ioMinutes: value,
+                        accessDenied: false,
+                      });
+                      setSearchParams(next);
+                    }}
+                    themeMode={themeMode}
+                    variant="full"
+                    disabled={data.isInitialLoading}
+                  />
                 ) : (
                   <ErrorState
                     title="History unavailable"
                     message="Could not load historical data for the selected time window."
                     actions={
-                      <button type="button" className="btn btn-primary btn-sm" onClick={() => void data.refreshHistory()}>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => void data.refreshHistory()}
+                      >
                         Retry history
                       </button>
                     }
@@ -298,62 +259,8 @@ export default function DashboardPage() {
                 )}
               </div>
               <div className="col-12 col-xxl-4 d-flex flex-column gap-3">
-                <ResourceRadarPanel snapshot={latestSnapshot} historyPoints={historyPoints} themeMode={themeMode} />
-                <CompactStatsPanel snapshot={latestSnapshot} />
-              </div>
-            </div>
-
-            <div className="row g-3">
-              <div className="col-12 col-xl-5">
+                <SnapshotInsightsPanel snapshot={latestSnapshot} />
                 <BottleneckPanel bottleneck={latestSnapshot.bottleneck} />
-              </div>
-              <div className="col-12 col-xl-7">
-                <div className="card shadow-sm border-0 h-100 panel-card detail-panel">
-                  <div className="card-body">
-                    <div className="panel-head d-flex justify-content-between align-items-center mb-3">
-                      <h2 className="h6 mb-0 panel-title">Latest Sample Details</h2>
-                      <span className="small panel-caption">
-                        {liveRefreshEnabled ? 'Auto refresh active' : 'Manual refresh mode'}
-                      </span>
-                    </div>
-                    <div className="row g-3 small">
-                      <div className="col-6 col-md-4">
-                        <div className="text-body-secondary">Processes</div>
-                        <div className="fw-semibold">{latestSnapshot.process_count}</div>
-                      </div>
-                      <div className="col-6 col-md-4">
-                        <div className="text-body-secondary">CPU IOWait</div>
-                        <div className="fw-semibold">
-                          {latestSnapshot.cpu.iowait_percent == null
-                            ? '-'
-                            : `${latestSnapshot.cpu.iowait_percent.toFixed(1)}%`}
-                        </div>
-                      </div>
-                      <div className="col-6 col-md-4">
-                        <div className="text-body-secondary">Disk Avg Util</div>
-                        <div className="fw-semibold">{latestSnapshot.disk.avg_util_percent.toFixed(1)}%</div>
-                      </div>
-                      <div className="col-6 col-md-4">
-                        <div className="text-body-secondary">CPU Load (1m)</div>
-                        <div className="fw-semibold">
-                          {latestSnapshot.cpu.load_1 == null ? '-' : latestSnapshot.cpu.load_1.toFixed(2)}
-                        </div>
-                      </div>
-                      <div className="col-6 col-md-4">
-                        <div className="text-body-secondary">GPU Count</div>
-                        <div className="fw-semibold">{latestSnapshot.gpu.count}</div>
-                      </div>
-                      <div className="col-6 col-md-4">
-                        <div className="text-body-secondary">Sample Interval</div>
-                        <div className="fw-semibold">
-                          {latestSnapshot.interval_seconds == null
-                            ? '-'
-                            : `${latestSnapshot.interval_seconds.toFixed(1)}s`}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 

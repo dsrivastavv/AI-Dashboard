@@ -1,8 +1,9 @@
+import type { ReactNode } from 'react';
+import { Cpu, Database, Globe, HardDrive } from 'lucide-react';
 import {
   formatBytes,
-  formatDateTime,
+  formatNumber,
   formatPercent,
-  formatRelativeSeconds,
   formatThroughput,
 } from '../../lib/format';
 import type { MetricSnapshot } from '../../types/api';
@@ -11,109 +12,100 @@ interface SummaryCardsProps {
   snapshot: MetricSnapshot;
 }
 
-type MetricTone = 'cpu' | 'memory' | 'gpu' | 'disk' | 'network' | 'time';
+type MetricTone = 'cpu' | 'memory' | 'gpu' | 'disk' | 'network';
 
 interface MetricCardProps {
-  label: string;
+  label: ReactNode;
   value: string;
   tone: MetricTone;
   meta?: string;
-  hint?: string;
-  emphasis?: 'hero' | 'compact';
-  gridClass?: string;
+  hint?: ReactNode;
+  barPercent?: number;
 }
 
-function MetricCard({
-  label,
-  value,
-  tone,
-  meta,
-  hint,
-  emphasis = 'compact',
-  gridClass,
-}: MetricCardProps) {
+function MetricCard({ label, value, tone, meta, hint, barPercent }: MetricCardProps) {
   return (
-    <div className={gridClass ?? (emphasis === 'hero' ? 'col-12 col-xl-4' : 'col-12 col-sm-6 col-xl-4 col-xxl-2')}>
-      <div className={`metric-card metric-card--${tone} metric-card--${emphasis}`}>
-        <div className="metric-card-top">
-          <div className="metric-orb" aria-hidden="true" />
-          <span className="metric-label">{label}</span>
+    <div className={`metric-card metric-card--${tone}`}>
+      <span className="metric-label">{label}</span>
+      <div className="metric-value">{value}</div>
+      {barPercent !== undefined ? (
+        <div className="metric-bar" aria-hidden="true">
+          <div
+            className="metric-bar-fill"
+            style={{ width: `${Math.min(100, Math.max(0, barPercent))}%` }}
+          />
         </div>
-        <div className="metric-value">{value}</div>
-        <div className="metric-meta-row">
-          <span className="metric-meta">{meta || ' '}</span>
-          {hint ? <span className="metric-hint">{hint}</span> : null}
-        </div>
+      ) : null}
+      <div className="metric-meta-row">
+        <span className="metric-meta">{meta ?? ' '}</span>
+        {hint ? <span className="metric-hint">{hint}</span> : null}
       </div>
     </div>
   );
 }
 
 export default function SummaryCards({ snapshot }: SummaryCardsProps) {
-  const cpuCountText = snapshot.cpu.count_logical > 0 ? `${snapshot.cpu.count_logical} threads` : undefined;
-  const memMeta =
-    snapshot.memory.total_bytes > 0
-      ? `${formatBytes(snapshot.memory.used_bytes)} used`
-      : undefined;
-  const gpuMeta = snapshot.gpu.present ? `${snapshot.gpu.count} GPU(s)` : 'No accelerators detected';
-  const diskMeta = `${snapshot.disk.avg_util_percent.toFixed(1)}% avg`;
-  const networkMeta = `TX ${formatThroughput(snapshot.network.tx_bps)}`;
-  const timeMeta = formatDateTime(snapshot.collected_at);
+  const gpuTemps = snapshot.gpu.devices
+    .map((device) => device.temperature_c)
+    .filter((value): value is number => value != null && Number.isFinite(value));
+  const topGpuTemp = gpuTemps.length ? Math.max(...gpuTemps) : null;
+  const gpuMemoryPercent = snapshot.gpu.top_memory_percent;
+
+  const cpuCountText = snapshot.cpu.count_logical > 0
+    ? `${snapshot.cpu.count_logical} threads`
+    : undefined;
+  const cpuLoadMeta = `Load ${formatNumber(snapshot.cpu.load_1, 2)}`;
+  const cpuTempHint = 'Temp -';
+  const memoryMeta = `${formatBytes(snapshot.memory.used_bytes)} / ${formatBytes(snapshot.memory.total_bytes)}`;
+  const networkValue = formatThroughput(snapshot.network.rx_bps + snapshot.network.tx_bps);
+  const networkMeta = `↓ ${formatThroughput(snapshot.network.rx_bps)}`;
+  const diskMeta = `Read ${formatThroughput(snapshot.disk.read_bps)}`;
+  const gpuValue = snapshot.gpu.present ? formatPercent(gpuMemoryPercent) : 'No GPU';
+  const gpuMeta = topGpuTemp == null ? 'Temp -' : `Temp ${formatNumber(topGpuTemp)} C`;
+  const gpuHint = snapshot.gpu.present ? `${snapshot.gpu.count} GPU(s)` : 'No accelerators';
 
   return (
-    <div className="row g-3">
+    <div className="metrics-grid">
       <MetricCard
-        label="CPU Usage"
+        label={<><Cpu size={12} aria-hidden="true" /> CPU Usage</>}
         value={formatPercent(snapshot.cpu.usage_percent)}
-        meta={cpuCountText}
-        hint={snapshot.cpu.iowait_percent == null ? undefined : `IOWait ${formatPercent(snapshot.cpu.iowait_percent)}`}
+        meta={cpuLoadMeta}
+        hint={`${cpuTempHint}${cpuCountText ? ` | ${cpuCountText}` : ''}`}
         tone="cpu"
-        emphasis="hero"
-        gridClass="col-12 col-xxl-4"
+        barPercent={snapshot.cpu.usage_percent}
       />
       <MetricCard
-        label="Memory"
+        label={<><Database size={12} aria-hidden="true" /> Memory</>}
         value={formatPercent(snapshot.memory.percent)}
-        meta={memMeta}
-        hint={snapshot.memory.swap_percent > 0 ? `Swap ${formatPercent(snapshot.memory.swap_percent)}` : 'Swap idle'}
+        meta={memoryMeta}
+        hint={snapshot.memory.swap_percent > 0
+          ? `Swap ${formatPercent(snapshot.memory.swap_percent)}`
+          : 'Swap idle'}
         tone="memory"
-        gridClass="col-12 col-sm-6 col-lg-4 col-xxl-2"
+        barPercent={snapshot.memory.percent}
       />
       <MetricCard
-        label="Top GPU Util"
-        value={snapshot.gpu.present ? formatPercent(snapshot.gpu.top_util_percent) : 'No GPU'}
-        meta={gpuMeta}
-        hint={
-          snapshot.gpu.present && snapshot.gpu.top_memory_percent != null
-            ? `Mem ${formatPercent(snapshot.gpu.top_memory_percent)}`
-            : undefined
-        }
-        tone="gpu"
-        gridClass="col-12 col-sm-6 col-lg-4 col-xxl-2"
-      />
-      <MetricCard
-        label="Disk Util"
+        label={<><HardDrive size={12} aria-hidden="true" /> Disk Util</>}
         value={formatPercent(snapshot.disk.util_percent)}
         meta={diskMeta}
-        hint={`Read ${formatThroughput(snapshot.disk.read_bps)}`}
+        hint={`↓ ${formatThroughput(snapshot.disk.write_bps)} write`}
         tone="disk"
-        gridClass="col-12 col-sm-6 col-lg-4 col-xxl-2"
+        barPercent={snapshot.disk.util_percent}
       />
       <MetricCard
-        label="Network RX"
-        value={formatThroughput(snapshot.network.rx_bps)}
+        label={<><Globe size={12} aria-hidden="true" /> Network</>}
+        value={networkValue}
         meta={networkMeta}
-        hint={`Processes ${snapshot.process_count}`}
+        hint={`↑ ${formatThroughput(snapshot.network.tx_bps)}`}
         tone="network"
-        gridClass="col-12 col-md-6 col-xxl-3"
       />
       <MetricCard
-        label="Snapshot Age"
-        value={formatRelativeSeconds(snapshot.age_seconds)}
-        meta={timeMeta}
-        hint={snapshot.interval_seconds == null ? undefined : `Interval ${snapshot.interval_seconds.toFixed(1)}s`}
-        tone="time"
-        gridClass="col-12 col-md-6 col-xxl-3"
+        label={<><Database size={12} aria-hidden="true" /> GPU Memory</>}
+        value={gpuValue}
+        meta={gpuMeta}
+        hint={gpuHint}
+        tone="gpu"
+        barPercent={snapshot.gpu.present && gpuMemoryPercent != null ? gpuMemoryPercent : undefined}
       />
     </div>
   );

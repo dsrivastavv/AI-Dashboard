@@ -1,9 +1,17 @@
+import { ArrowDown, ArrowUp, Zap } from 'lucide-react';
 import { formatPercent, formatThroughput } from '../../lib/format';
 import type { DiskDeviceMetric } from '../../types/api';
 import EmptyState from '../common/EmptyState';
 
 interface DiskTableProps {
   disks: DiskDeviceMetric[];
+}
+
+function utilColor(percent: number | null | undefined): string {
+  if (percent == null) return '';
+  if (percent >= 90) return 'util-critical';
+  if (percent >= 70) return 'util-warn';
+  return 'util-ok';
 }
 
 export default function DiskTable({ disks }: DiskTableProps) {
@@ -14,19 +22,34 @@ export default function DiskTable({ disks }: DiskTableProps) {
   }
 
   return (
-    <div className="card shadow-sm border-0 h-100 panel-card table-panel">
+    <div className="card shadow-sm border-0 h-100 panel-card table-panel entity-panel entity-panel--disk">
       <div className="card-body p-0">
         <div className="p-3 border-bottom table-panel-head">
-          <h2 className="h6 mb-0 panel-title">Disk Devices</h2>
+          <h2 className="h6 mb-0 panel-title d-flex align-items-center gap-2">
+            <span className="entity-dot entity-dot--disk" aria-hidden="true" />
+            Disk Devices
+          </h2>
         </div>
         <div className="table-responsive">
           <table className="table table-sm align-middle mb-0 dashboard-table">
             <thead>
               <tr>
                 <th scope="col">Device</th>
-                <th scope="col">Read</th>
-                <th scope="col">Write</th>
-                <th scope="col">Util</th>
+                <th scope="col">
+                  <span className="th-icon-label">
+                    <ArrowDown size={12} aria-hidden="true" /> Read
+                  </span>
+                </th>
+                <th scope="col">
+                  <span className="th-icon-label">
+                    <ArrowUp size={12} aria-hidden="true" /> Write
+                  </span>
+                </th>
+                <th scope="col">
+                  <span className="th-icon-label">
+                    <Zap size={12} aria-hidden="true" /> Util
+                  </span>
+                </th>
                 <th scope="col">Read IOPS</th>
                 <th scope="col">Write IOPS</th>
               </tr>
@@ -37,9 +60,11 @@ export default function DiskTable({ disks }: DiskTableProps) {
                   <td className="fw-semibold">{disk.device}</td>
                   <td>{formatThroughput(disk.read_bps)}</td>
                   <td>{formatThroughput(disk.write_bps)}</td>
-                  <td>{formatPercent(disk.util_percent)}</td>
-                  <td>{disk.read_iops.toFixed(1)}</td>
-                  <td>{disk.write_iops.toFixed(1)}</td>
+                  <td className={utilColor(disk.util_percent)}>
+                    {formatPercent(disk.util_percent)}
+                  </td>
+                  <td className="text-body-secondary">{disk.read_iops.toFixed(1)}</td>
+                  <td className="text-body-secondary">{disk.write_iops.toFixed(1)}</td>
                 </tr>
               ))}
             </tbody>

@@ -14,33 +14,33 @@ export default function AppShell({
   subtitle,
   headerActions,
   sidebar,
-  themeMode = 'light',
+  themeMode = 'dark',
   children,
 }: AppShellProps) {
   return (
-    <div className={`min-vh-100 dashboard-bg py-4 py-lg-5 dashboard-app-shell theme-${themeMode}`}>
-      <div className="container-xl">
-        <div className="app-hero-card d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-4">
-          <div>
-            <p className="hero-kicker mb-2">AI Dashboard</p>
-            <h1 className="app-hero-title mb-2">{title}</h1>
-            {subtitle ? <p className="hero-subtitle mb-2">{subtitle}</p> : null}
-            <div className="hero-chip-row">
-              <span className="hero-chip">Designed by Divyansh Srivastava</span>
-              <span className="hero-chip hero-chip-soft">Real-time metrics interface</span>
-            </div>
-          </div>
-          {headerActions ? <div className="w-100 w-lg-auto app-hero-actions">{headerActions}</div> : null}
-        </div>
+    <div className={`app-root theme-${themeMode}`}>
+      {sidebar ? (
+        <nav className="app-sidebar" aria-label="Dashboard navigation">
+          {sidebar}
+        </nav>
+      ) : null}
 
-        {sidebar ? (
-          <div className="dashboard-layout">
-            <div className="dashboard-layout-sidebar">{sidebar}</div>
-            <div className="dashboard-layout-main">{children}</div>
+      <div className={`app-body${sidebar ? '' : ' app-body--no-sidebar'}`}>
+        <header className="app-topbar">
+          <div className="app-topbar-left">
+            <h1 className="app-topbar-title">{title}</h1>
+            {subtitle ? (
+              <span className="app-topbar-subtitle d-none d-lg-inline">{subtitle}</span>
+            ) : null}
           </div>
-        ) : (
-          children
-        )}
+          {headerActions ? (
+            <div className="app-topbar-right">{headerActions}</div>
+          ) : null}
+        </header>
+
+        <main className="app-main">
+          {children}
+        </main>
       </div>
     </div>
   );

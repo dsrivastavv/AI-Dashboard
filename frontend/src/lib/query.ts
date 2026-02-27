@@ -31,7 +31,13 @@ export function parseServerParam(raw: string | null): string | null {
 
 export function withDashboardQuery(
   current: URLSearchParams,
-  patch: { server?: string | null; minutes?: number | null; accessDenied?: boolean | null },
+  patch: {
+    server?: string | null;
+    minutes?: number | null;
+    systemMinutes?: number | null;
+    ioMinutes?: number | null;
+    accessDenied?: boolean | null;
+  },
 ): URLSearchParams {
   const next = new URLSearchParams(current);
 
@@ -48,6 +54,24 @@ export function withDashboardQuery(
       next.set('minutes', String(patch.minutes));
     } else {
       next.delete('minutes');
+    }
+  }
+
+  if ('systemMinutes' in patch) {
+    next.delete('minutes');
+    if (patch.systemMinutes && ALLOWED_MINUTES.has(patch.systemMinutes)) {
+      next.set('system_minutes', String(patch.systemMinutes));
+    } else {
+      next.delete('system_minutes');
+    }
+  }
+
+  if ('ioMinutes' in patch) {
+    next.delete('minutes');
+    if (patch.ioMinutes && ALLOWED_MINUTES.has(patch.ioMinutes)) {
+      next.set('io_minutes', String(patch.ioMinutes));
+    } else {
+      next.delete('io_minutes');
     }
   }
 
