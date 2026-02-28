@@ -7,6 +7,7 @@ app_name = "monitoring"
 urlpatterns = [
     path("", views.api_root, name="api_root"),
     path("api/servers/", views.api_servers, name="api_servers"),
+    path("api/servers/register/", views.api_register_server, name="api_register_server"),
     path("api/metrics/latest/", views.api_metrics_latest, name="api_metrics_latest"),
     path("api/metrics/history/", views.api_metrics_history, name="api_metrics_history"),
     path("api/notifications/", views.api_notifications, name="api_notifications"),

@@ -142,342 +142,265 @@ export default function LoginCard({
   }
 
   return (
-    <div className="lp-shell">
-      {/* Animated background orbs */}
-      <div className="lp-orb lp-orb-1" aria-hidden="true" />
-      <div className="lp-orb lp-orb-2" aria-hidden="true" />
-      <div className="lp-orb lp-orb-3" aria-hidden="true" />
-      <div className="lp-grid-bg" aria-hidden="true" />
+    <div className="claude-shell">
+      <div className="claude-bg-grid" aria-hidden="true" />
 
-      <div className="lp-board">
+      <header className="claude-nav">
+        <div className="claude-brand">
+          <div className="claude-burst" aria-hidden="true" />
+          <span>AI Dashboard</span>
+        </div>
+        <div className="claude-nav-links" aria-hidden="true">
+          <span>Platform</span>
+          <span>Agents</span>
+          <span>Pricing</span>
+          <span>Docs</span>
+        </div>
+        <div className="claude-nav-actions" aria-hidden="true">
+          <button className="claude-ghost">Contact sales</button>
+          <button className="claude-pill">Launch dashboard</button>
+        </div>
+      </header>
 
-        {/* ── Left: Features panel ─────────────────────────────────────────── */}
-        <div className="lp-panel-left">
-          <div className="lp-left-inner">
+      <div className="claude-hero">
+        <div className="claude-left">
+          <p className="claude-kicker">Real-time AI infrastructure monitoring</p>
+          <h1 className="claude-title">Your cluster, always in view</h1>
+          <p className="claude-sub">Track GPU, CPU, memory and disk across every training node — from one unified dashboard.</p>
 
-            <div className="lp-brand-row">
-              <span className="lp-brand-dot" />
-              <span className="lp-brand-name">AI Dashboard</span>
-            </div>
+          <div className="claude-card">
+            {showAccessDenied && (
+              <div className="claude-alert" role="alert">
+                Access denied. Your Google account is not in the allowlist.
+              </div>
+            )}
+            {error && <div className="claude-alert" role="alert">{error}</div>}
+            {successMessage && <div className="claude-alert claude-alert--success" role="status">{successMessage}</div>}
 
-            <h1 className="lp-headline">
-              Monitor Everything<br />
-              with <span className="lp-headline-accent">total clarity.</span>
-            </h1>
+            <button
+              type="button"
+              className="claude-google"
+              onClick={onGoogleSignIn}
+              disabled={busy}
+            >
+              <GoogleMark />
+              <span>{isCheckingSession ? 'Checking session…' : 'Continue with Google'}</span>
+            </button>
 
-            <p className="lp-tagline">
-              A modern, open-source AI monitoring dashboard for GPU-intensive tasks.
+            <div className="claude-divider">OR</div>
+
+            {mode === 'signin' && (
+              <form className="claude-form" onSubmit={handleSignIn} noValidate>
+                <label className="claude-label" htmlFor="si-username">Email or username</label>
+                <input
+                  id="si-username"
+                  className="claude-input"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="you@example.com"
+                  value={siUsername}
+                  onChange={(e) => setSiUsername(e.target.value)}
+                  disabled={busy}
+                />
+
+                <label className="claude-label" htmlFor="si-password">Password</label>
+                <div className="claude-input-wrap">
+                  <input
+                    id="si-password"
+                    className="claude-input"
+                    type={siShowPass ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    value={siPassword}
+                    onChange={(e) => setSiPassword(e.target.value)}
+                    disabled={busy}
+                  />
+                  <button
+                    type="button"
+                    className="claude-eye"
+                    onClick={() => setSiShowPass((v) => !v)}
+                    aria-label={siShowPass ? 'Hide password' : 'Show password'}
+                  >
+                    <EyeIcon open={siShowPass} />
+                  </button>
+                </div>
+
+                <button
+                  type="submit"
+                  className="claude-submit"
+                  disabled={busy || !siUsername.trim() || !siPassword}
+                >
+                  {isLoading ? 'Signing in…' : 'Continue with email'}
+                </button>
+
+                <div className="claude-links">
+                  <button type="button" className="claude-link" onClick={() => switchMode('forgot')}>
+                    Forgot password?
+                  </button>
+                  <button type="button" className="claude-link" onClick={() => switchMode('register')}>
+                    Create account
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {mode === 'register' && (
+              <form className="claude-form" onSubmit={handleRegister} noValidate>
+                <label className="claude-label" htmlFor="reg-username">Username</label>
+                <input
+                  id="reg-username"
+                  className="claude-input"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="choose a username"
+                  value={regUsername}
+                  onChange={(e) => setRegUsername(e.target.value)}
+                  disabled={busy}
+                />
+
+                <label className="claude-label" htmlFor="reg-email">Email</label>
+                <input
+                  id="reg-email"
+                  className="claude-input"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={regEmail}
+                  onChange={(e) => setRegEmail(e.target.value)}
+                  disabled={busy}
+                />
+
+                <label className="claude-label" htmlFor="reg-password">Password</label>
+                <div className="claude-input-wrap">
+                  <input
+                    id="reg-password"
+                    className="claude-input"
+                    type={regShowPass ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    placeholder="min 8 characters"
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    disabled={busy}
+                  />
+                  <button
+                    type="button"
+                    className="claude-eye"
+                    onClick={() => setRegShowPass((v) => !v)}
+                    aria-label={regShowPass ? 'Hide password' : 'Show password'}
+                  >
+                    <EyeIcon open={regShowPass} />
+                  </button>
+                </div>
+
+                <label className="claude-label" htmlFor="reg-confirm">Confirm password</label>
+                <input
+                  id="reg-confirm"
+                  className={`claude-input${passwordMismatch ? ' claude-input--error' : ''}`}
+                  type={regShowPass ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="repeat password"
+                  value={regConfirm}
+                  onChange={(e) => setRegConfirm(e.target.value)}
+                  disabled={busy}
+                />
+                {passwordMismatch && <p className="claude-error-text">Passwords don't match</p>}
+
+                <button
+                  type="submit"
+                  className="claude-submit"
+                  disabled={busy || !regUsername.trim() || !regEmail.trim() || !regPassword || passwordMismatch}
+                >
+                  {isLoading ? 'Creating…' : 'Create account'}
+                </button>
+
+                <div className="claude-links">
+                  <button type="button" className="claude-link" onClick={() => switchMode('signin')}>
+                    Back to sign in
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {mode === 'forgot' && (
+              <form className="claude-form" onSubmit={handleForgotPassword} noValidate>
+                <p className="claude-help">Enter your email and we'll send you a reset link.</p>
+                <label className="claude-label" htmlFor="fp-email">Email</label>
+                <input
+                  id="fp-email"
+                  className="claude-input"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={fpEmail}
+                  onChange={(e) => setFpEmail(e.target.value)}
+                  disabled={busy}
+                />
+
+                <button
+                  type="submit"
+                  className="claude-submit"
+                  disabled={busy || !fpEmail.trim()}
+                >
+                  {isLoading ? 'Sending…' : 'Send reset link'}
+                </button>
+
+                <div className="claude-links">
+                  <button type="button" className="claude-link" onClick={() => switchMode('signin')}>
+                    Back to sign in
+                  </button>
+                </div>
+              </form>
+            )}
+
+            <p className="claude-note">
+              By continuing, you agree to AI Dashboard&apos;s Privacy Policy and Terms. We may send important product updates.
             </p>
 
-            {/* Live metrics preview */}
-            <div className="lp-metrics-showcase">
-              <div className="lp-showcase-header">
-                <span className="lp-live-dot" />
-                Live metrics preview
-              </div>
-              {METRICS.map((m) => (
-                <MetricBar key={m.label} label={m.label} value={m.value} color={m.color} />
-              ))}
-            </div>
-
-            {/* Feature list */}
-            <ul className="lp-feature-list">
-              {FEATURES.map((f, i) => (
-                <li key={f.title} className="lp-feature-item" style={{ animationDelay: `${0.1 * (i + 1)}s` }}>
-                  <span className="lp-feature-icon">{f.icon}</span>
-                  <div>
-                    <div className="lp-feature-title">{f.title}</div>
-                    <div className="lp-feature-desc">{f.desc}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
           </div>
+
+          <button className="claude-app-btn" type="button" aria-hidden="true">
+            Install the agent
+          </button>
         </div>
 
-        {/* ── Right: Auth panel ─────────────────────────────────────────────── */}
-        <div className="lp-panel-right">
-          <div className="lp-auth-card">
-
-            {/* Logo */}
-            <div className="lp-auth-logo">
-              <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-                <rect width="32" height="32" rx="8" fill="rgba(59,130,246,0.18)" />
-                <path d="M8 24L16 8l8 16M11 20h10" stroke="#60a5fa" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span className="lp-auth-logo-text">AI Dashboard</span>
+        <div className="claude-right" aria-hidden="true">
+          {/* Server status bar */}
+          <div className="claude-preview-header">
+            <div className="claude-preview-status">
+              <span className="claude-live-dot" />
+              <span className="claude-preview-server">gpu-cluster-01</span>
             </div>
-
-            {/* Mode tabs */}
-            <div className="lp-tabs" role="tablist">
-              <button
-                role="tab"
-                aria-selected={mode === 'signin'}
-                className={`lp-tab ${mode === 'signin' ? 'lp-tab--active' : ''}`}
-                onClick={() => switchMode('signin')}
-                type="button"
-              >
-                Sign in
-              </button>
-              <button
-                role="tab"
-                aria-selected={mode === 'register'}
-                className={`lp-tab ${mode === 'register' ? 'lp-tab--active' : ''}`}
-                onClick={() => switchMode('register')}
-                type="button"
-              >
-                Create account
-              </button>
-              <button
-                role="tab"
-                aria-selected={mode === 'forgot'}
-                className={`lp-tab ${mode === 'forgot' ? 'lp-tab--active' : ''}`}
-                onClick={() => switchMode('forgot')}
-                type="button"
-              >
-                Forgot password
-              </button>
-            </div>
-
-            {/* Feedback banners */}
-            {showAccessDenied && (
-              <div className="lp-alert lp-alert--error" role="alert">
-                Access denied. Your Google account is not in the configured allowlist.
-              </div>
-            )}
-            {error && (
-              <div className="lp-alert lp-alert--error" role="alert">{error}</div>
-            )}
-            {successMessage && (
-              <div className="lp-alert lp-alert--success" role="status">{successMessage}</div>
-            )}
-
-            <div className={`lp-form-container lp-form-container--${mode}`}>
-
-              {/* ── Sign In ─────────────────────────────────────────────────── */}
-              <div className="lp-form-section lp-form-section--signin">
-                <button
-                  type="button"
-                  className="lp-google-btn"
-                  onClick={onGoogleSignIn}
-                  disabled={busy}
-                >
-                  <GoogleMark />
-                  <span>{isCheckingSession ? 'Checking session…' : 'Continue with Google'}</span>
-                </button>
-
-                <div className="lp-divider"><span>or sign in with credentials</span></div>
-
-                <form onSubmit={handleSignIn} className="lp-form" noValidate>
-                  <div className="lp-field">
-                    <label className="lp-label" htmlFor="si-username">Username</label>
-                    <input
-                      id="si-username"
-                      className="lp-input"
-                      type="text"
-                      autoComplete="username"
-                      placeholder="your-username"
-                      value={siUsername}
-                      onChange={(e) => setSiUsername(e.target.value)}
-                      disabled={busy}
-                    />
-                  </div>
-
-                  <div className="lp-field">
-                    <label className="lp-label" htmlFor="si-password">Password</label>
-                    <div className="lp-input-wrap">
-                      <input
-                        id="si-password"
-                        className="lp-input"
-                        type={siShowPass ? 'text' : 'password'}
-                        autoComplete="current-password"
-                        placeholder="••••••••"
-                        value={siPassword}
-                        onChange={(e) => setSiPassword(e.target.value)}
-                        disabled={busy}
-                      />
-                      <button
-                        type="button"
-                        className="lp-eye-btn"
-                        onClick={() => setSiShowPass((v) => !v)}
-                        tabIndex={-1}
-                        aria-label={siShowPass ? 'Hide password' : 'Show password'}
-                      >
-                        <EyeIcon open={siShowPass} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="lp-form-row-end">
-                    <button type="button" className="lp-link-btn" onClick={() => switchMode('forgot')}>
-                      Forgot password?
-                    </button>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="lp-submit-btn"
-                    disabled={busy || !siUsername.trim() || !siPassword}
-                  >
-                    {isLoading ? 'Signing in…' : 'Sign in'}
-                  </button>
-                </form>
-
-                <p className="lp-switch-hint">
-                  No account yet?{' '}
-                  <button className="lp-link-btn" onClick={() => switchMode('register')} type="button">
-                    Create one
-                  </button>
-                </p>
-              </div>
-
-              {/* ── Create Account ──────────────────────────────────────────── */}
-              <div className="lp-form-section lp-form-section--register">
-                <button
-                  type="button"
-                  className="lp-google-btn"
-                  onClick={onGoogleSignIn}
-                  disabled={busy}
-                >
-                  <GoogleMark />
-                  <span>Sign up with Google</span>
-                </button>
-
-                <div className="lp-divider"><span>or create with credentials</span></div>
-
-                <form onSubmit={handleRegister} className="lp-form" noValidate>
-                  <div className="lp-field">
-                    <label className="lp-label" htmlFor="reg-username">Username</label>
-                    <input
-                      id="reg-username"
-                      className="lp-input"
-                      type="text"
-                      autoComplete="username"
-                      placeholder="choose a username"
-                      value={regUsername}
-                      onChange={(e) => setRegUsername(e.target.value)}
-                      disabled={busy}
-                    />
-                  </div>
-
-                  <div className="lp-field">
-                    <label className="lp-label" htmlFor="reg-email">Email</label>
-                    <input
-                      id="reg-email"
-                      className="lp-input"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="you@example.com"
-                      value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
-                      disabled={busy}
-                    />
-                  </div>
-
-                  <div className="lp-field">
-                    <label className="lp-label" htmlFor="reg-password">Password</label>
-                    <div className="lp-input-wrap">
-                      <input
-                        id="reg-password"
-                        className="lp-input"
-                        type={regShowPass ? 'text' : 'password'}
-                        autoComplete="new-password"
-                        placeholder="min 8 characters"
-                        value={regPassword}
-                        onChange={(e) => setRegPassword(e.target.value)}
-                        disabled={busy}
-                      />
-                      <button
-                        type="button"
-                        className="lp-eye-btn"
-                        onClick={() => setRegShowPass((v) => !v)}
-                        tabIndex={-1}
-                        aria-label={regShowPass ? 'Hide password' : 'Show password'}
-                      >
-                        <EyeIcon open={regShowPass} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="lp-field">
-                    <label className="lp-label" htmlFor="reg-confirm">Confirm password</label>
-                    <input
-                      id="reg-confirm"
-                      className={`lp-input${passwordMismatch ? ' lp-input--error' : ''}`}
-                      type={regShowPass ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      placeholder="repeat password"
-                      value={regConfirm}
-                      onChange={(e) => setRegConfirm(e.target.value)}
-                      disabled={busy}
-                    />
-                    {passwordMismatch && (
-                      <p className="lp-field-error">Passwords don't match</p>
-                    )}
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="lp-submit-btn"
-                    disabled={busy || !regUsername.trim() || !regEmail.trim() || !regPassword || passwordMismatch}
-                  >
-                    {isLoading ? 'Creating account…' : 'Create account'}
-                  </button>
-                </form>
-
-                <p className="lp-switch-hint">
-                  Already have an account?{' '}
-                  <button className="lp-link-btn" onClick={() => switchMode('signin')} type="button">
-                    Sign in
-                  </button>
-                </p>
-              </div>
-
-              {/* ── Forgot Password ─────────────────────────────────────────── */}
-              <div className="lp-form-section lp-form-section--forgot">
-                <p className="lp-forgot-hint">
-                  Enter your email and we'll send you a password reset link.
-                </p>
-
-                <form onSubmit={handleForgotPassword} className="lp-form" noValidate>
-                  <div className="lp-field">
-                    <label className="lp-label" htmlFor="fp-email">Email address</label>
-                    <input
-                      id="fp-email"
-                      className="lp-input"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="you@example.com"
-                      value={fpEmail}
-                      onChange={(e) => setFpEmail(e.target.value)}
-                      disabled={busy}
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="lp-submit-btn"
-                    disabled={busy || !fpEmail.trim()}
-                  >
-                    {isLoading ? 'Sending…' : 'Send reset link'}
-                  </button>
-                </form>
-
-                <p className="lp-switch-hint">
-                  Remember your password?{' '}
-                  <button className="lp-link-btn" onClick={() => switchMode('signin')} type="button">
-                    Sign in
-                  </button>
-                </p>
-              </div>
-            </div>
-
-            <p className="lp-credit">AI Dashboard · by Divyansh Srivastava</p>
-
+            <span className="claude-preview-badge">4 servers online</span>
           </div>
-        </div>
 
+          {/* Live metrics */}
+          <div className="claude-metrics-panel">
+            <div className="claude-metrics-heading">
+              <span className="claude-metrics-live-dot" />
+              Live telemetry
+            </div>
+            {METRICS.map((m) => (
+              <MetricBar key={m.label} {...m} />
+            ))}
+          </div>
+
+          {/* Feature highlights */}
+          <ul className="claude-feature-grid" role="list">
+            {FEATURES.map((f, i) => (
+              <li
+                key={f.title}
+                className="claude-feature-item"
+                style={{ animationDelay: `${i * 0.1}s` }}
+              >
+                <span className="claude-feature-icon">{f.icon}</span>
+                <div>
+                  <p className="claude-feature-title">{f.title}</p>
+                  <p className="claude-feature-desc">{f.desc}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

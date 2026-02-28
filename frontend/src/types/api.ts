@@ -169,6 +169,13 @@ export interface ServersListResponse {
   servers: ServerSummary[];
 }
 
+export interface RegisterServerResponse {
+  ok: true;
+  server: ServerSummary;
+  ingest_token: string;
+  agent_command: string;
+}
+
 export interface LatestSnapshotResponse {
   ok: true;
   servers: ServerSummary[];

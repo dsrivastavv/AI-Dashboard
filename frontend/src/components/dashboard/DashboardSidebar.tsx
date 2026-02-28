@@ -27,6 +27,7 @@ interface DashboardSidebarProps {
   servers: ServerSummary[];
   onServerChange: (slug: string | null) => void;
   isServerLoading?: boolean;
+  onCreateServer?: () => void;
 }
 
 export default function DashboardSidebar({
@@ -38,6 +39,7 @@ export default function DashboardSidebar({
   servers,
   onServerChange,
   isServerLoading = false,
+  onCreateServer,
 }: DashboardSidebarProps) {
   const { pathname, search } = useLocation();
 
@@ -61,7 +63,17 @@ export default function DashboardSidebar({
       <div className="sidebar-section">
         <div className="sidebar-section-label">
           <span className="sidebar-section-icon"><Server size={11} aria-hidden="true" /></span>
-          Server
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            Server
+            <button
+              type="button"
+              className="sidebar-icon-btn"
+              onClick={onCreateServer}
+              title="Add server"
+            >
+              +
+            </button>
+          </span>
         </div>
         <div className="sidebar-server-select-wrap">
           <select

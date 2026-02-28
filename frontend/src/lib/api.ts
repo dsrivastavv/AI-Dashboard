@@ -4,6 +4,7 @@ import type {
   ServersListResponse,
   NotificationsResponse,
   MarkNotificationsReadResponse,
+  RegisterServerResponse,
 } from '../types/api';
 import { requestJson } from './http';
 
@@ -22,6 +23,22 @@ function buildPath(path: string, params?: Record<string, string | number | null 
 
 export function getServers(signal?: AbortSignal) {
   return requestJson<ServersListResponse>('/api/servers/', { signal });
+}
+
+export function registerServer(payload: {
+  name: string;
+  slug?: string;
+  hostname?: string;
+  description?: string;
+  signal?: AbortSignal;
+}) {
+  const { signal, ...body } = payload;
+  return requestJson<RegisterServerResponse>('/api/servers/register/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  });
 }
 
 export function getMetricsLatest(options: { server?: string | null; signal?: AbortSignal } = {}) {

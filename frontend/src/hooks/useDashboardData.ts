@@ -34,7 +34,7 @@ export interface DashboardDataResult {
   isRefreshing: boolean;
   lastLatestSuccessAt: number | null;
   lastHistorySuccessAt: number | null;
-  refreshAll: () => Promise<void>;
+  refreshAll: (params?: { background?: boolean }) => Promise<void>;
   refreshLatest: () => Promise<void>;
   refreshHistory: () => Promise<void>;
 }
@@ -260,7 +260,7 @@ export function useDashboardData(options: {
     isRefreshing,
     lastLatestSuccessAt,
     lastHistorySuccessAt,
-    refreshAll: () => refreshAll(),
+    refreshAll: (params?: { background?: boolean }) => refreshAll(params),
     refreshLatest: () => fetchLatest(),
     refreshHistory: () => fetchHistory(),
   };

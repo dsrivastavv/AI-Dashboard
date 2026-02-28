@@ -12,11 +12,13 @@ import logging
 from django.conf import settings
 from django.contrib.auth import logout
 from django.core.cache import cache
+from django.db import IntegrityError
 from django.db.models import Count, Max
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
@@ -248,6 +250,64 @@ def _selected_server_and_list(request) -> tuple[MonitoredServer | None, list[Mon
     servers = list(_server_queryset())
     selected = _pick_server(servers, request.GET.get("server"))
     return selected, servers
+
+
+@require_POST
+@_rate_limit(max_requests=20, window_seconds=300)
+def api_register_server(request):
+    """Create a new MonitoredServer and return its one-time ingest token."""
+    access_error = _require_authenticated_allowlisted(request)
+    if access_error is not None:
+        return access_error
+
+    body, error_response = _load_json_dict(request)
+    if error_response is not None:
+        return error_response
+
+    name = (body.get("name") or "").strip()
+    slug_raw = (body.get("slug") or "").strip()
+    hostname = (body.get("hostname") or "").strip()
+    description = (body.get("description") or "").strip()
+
+    if not name:
+        return JsonResponse({"ok": False, "error": "Name is required."}, status=400)
+
+    slug = slugify(slug_raw or name)[:64]
+    if not slug:
+        return JsonResponse({"ok": False, "error": "Slug could not be derived from name."}, status=400)
+
+    ingest_token = MonitoredServer.generate_token()
+    try:
+        server = MonitoredServer.objects.create(
+            name=name[:128],
+            slug=slug,
+            hostname=hostname[:255],
+            description=description,
+            api_token_hash=MonitoredServer.hash_token(ingest_token),
+            is_active=True,
+        )
+    except IntegrityError:
+        return JsonResponse({"ok": False, "error": "Slug already exists. Choose another."}, status=409)
+
+    base_host = request.build_absolute_uri("/").rstrip("/")
+    agent_cmd = (
+        "ai-dashboard-agent "
+        f"--host {base_host} "
+        f"--server-slug {server.slug} "
+        f"--token '{ingest_token}' "
+        "--interval 2"
+    )
+
+    logger.info("Server registered via API: slug=%s user=%s", server.slug, getattr(request.user, "email", None))
+    return JsonResponse(
+        {
+            "ok": True,
+            "server": _serialize_server(server),
+            "ingest_token": ingest_token,
+            "agent_command": agent_cmd,
+        },
+        status=201,
+    )
 
 
 @require_GET

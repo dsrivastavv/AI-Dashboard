@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation, useSearchParams } from 'react-router-dom
 
 import AuthGate from '../auth/AuthGate';
 import DashboardSidebar, { type DashboardThemeMode } from '../dashboard/DashboardSidebar';
+import ServerCreateModal from '../dashboard/ServerCreateModal';
 import LoadingState from '../common/LoadingState';
 import AppShell from './AppShell';
 import NotificationBell from './NotificationBell';
@@ -47,6 +48,7 @@ export default function AppLayout() {
     liveRefreshEnabled: location.pathname === '/dashboard' || location.pathname === '/system',
   });
   const notifications = useNotifications();
+  const [showCreateServer, setShowCreateServer] = useState(false);
 
   const selectedServerSlug = data.selectedServer?.slug ?? requestedServer;
 
@@ -77,6 +79,7 @@ export default function AppLayout() {
           setSearchParams(next);
         }}
         isServerLoading={data.isInitialLoading}
+        onCreateServer={() => setShowCreateServer(true)}
       />
     ),
     [data, themeMode, searchParams, selectedServerSlug, setSearchParams],
@@ -135,6 +138,15 @@ export default function AppLayout() {
       )}
     >
       <Outlet context={context} />
+      <ServerCreateModal
+        isOpen={showCreateServer}
+        onClose={() => setShowCreateServer(false)}
+        onCreated={(res) => {
+          void data.refreshAll({ background: true });
+          const next = withDashboardQuery(searchParams, { server: res.server.slug, accessDenied: false });
+          setSearchParams(next, { replace: true });
+        }}
+      />
     </AppShell>
   );
 }
