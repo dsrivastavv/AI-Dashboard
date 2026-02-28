@@ -1,20 +1,23 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from urllib.parse import urlencode
 from datetime import timedelta
+from functools import wraps
 from typing import Any
 import logging
 
 from django.conf import settings
 from django.contrib.auth import logout
+from django.core.cache import cache
 from django.db.models import Count, Max
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from monitoring.auth import is_google_email_allowlisted
@@ -23,6 +26,29 @@ from monitoring.services.collector import ingest_sample_for_server
 from monitoring.version import BACKEND_VERSION, MIN_AGENT_VERSION
 
 logger = logging.getLogger(__name__)
+
+# ── Rate limiting ─────────────────────────────────────────────────────────────
+
+def _rate_limit(max_requests: int, window_seconds: int):
+    """Simple in-memory rate limiter keyed by IP address."""
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            ip = (request.META.get("REMOTE_ADDR") or "unknown").strip()
+            hashed = hashlib.sha256(ip.encode()).hexdigest()[:20]
+            cache_key = f"rl:{view_func.__name__}:{hashed}"
+            count = cache.get(cache_key, 0)
+            if count >= max_requests:
+                logger.warning("Rate limit hit: view=%s ip=%s", view_func.__name__, ip)
+                return JsonResponse(
+                    {"ok": False, "error": "Too many requests. Please try again later."},
+                    status=429,
+                    headers={"Retry-After": str(window_seconds)},
+                )
+            cache.set(cache_key, count + 1, timeout=window_seconds)
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def _label_to_title(label: str) -> str:
@@ -225,6 +251,7 @@ def _selected_server_and_list(request) -> tuple[MonitoredServer | None, list[Mon
 
 
 @require_GET
+@ensure_csrf_cookie
 def api_root(request):
     return JsonResponse(
         {
@@ -363,7 +390,6 @@ def api_notifications(request):
     return JsonResponse({"ok": True, "notifications": payload})
 
 
-@csrf_exempt
 @require_POST
 def api_notifications_mark_read(request):
     access_error = _require_authenticated_allowlisted(request)
@@ -504,11 +530,13 @@ def _extract_ingest_token(request) -> str:
 
 
 def _request_ip(request) -> str | None:
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if forwarded:
-        first = forwarded.split(",")[0].strip()
-        if first:
-            return first
+    # Only trust X-Forwarded-For when explicitly running behind a trusted reverse proxy.
+    if settings.SECURE_PROXY_SSL_HEADER:
+        forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if forwarded:
+            first = forwarded.split(",")[0].strip()
+            if first:
+                return first
     addr = (request.META.get("REMOTE_ADDR") or "").strip()
     return addr or None
 
@@ -532,9 +560,9 @@ def api_ingest_server_metrics(request, server_slug: str):
 
     try:
         snapshot = ingest_sample_for_server(server, payload, source_ip=_request_ip(request))
-    except Exception as exc:  # pragma: no cover - defensive API path
+    except Exception:  # pragma: no cover - defensive API path
         logger.exception("Ingest failed for server=%s", server_slug)
-        return JsonResponse({"ok": False, "error": f"Ingest failed: {exc}"}, status=400)
+        return JsonResponse({"ok": False, "error": "Ingest processing failed."}, status=400)
 
     logger.debug("Ingest OK server=%s snap_id=%s bottleneck=%s", server_slug, snapshot.id, snapshot.bottleneck)
     return JsonResponse(
@@ -555,8 +583,8 @@ def api_ingest_server_metrics(request, server_slug: str):
 
 # ── Credential auth views ─────────────────────────────────────────────────────
 
-@csrf_exempt
 @require_POST
+@_rate_limit(max_requests=10, window_seconds=60)
 def api_auth_login(request):
     """Authenticate with username + password and establish a session."""
     from django.contrib.auth import authenticate, login as auth_login
@@ -591,8 +619,8 @@ def api_auth_login(request):
     })
 
 
-@csrf_exempt
 @require_POST
+@_rate_limit(max_requests=5, window_seconds=300)
 def api_auth_register(request):
     """Create a new user account with username, email, and password."""
     from django.contrib.auth import get_user_model
@@ -625,6 +653,14 @@ def api_auth_register(request):
     if User.objects.filter(email=email).exists():
         return JsonResponse({"ok": False, "error": "That email is already registered."}, status=409)
 
+    # Credential accounts are subject to the same allowlist as Google accounts.
+    if not is_google_email_allowlisted(email):
+        logger.info("Register rejected: email not in allowlist email=%s", email)
+        return JsonResponse(
+            {"ok": False, "error": "Registration is restricted to authorized accounts."},
+            status=403,
+        )
+
     try:
         validate_password(password)
     except ValidationError as exc:
@@ -641,8 +677,8 @@ def api_auth_register(request):
     }, status=201)
 
 
-@csrf_exempt
 @require_POST
+@_rate_limit(max_requests=5, window_seconds=300)
 def api_auth_forgot_password(request):
     """Send a password-reset email (uses Django's built-in PasswordResetForm)."""
     from django.contrib.auth.forms import PasswordResetForm

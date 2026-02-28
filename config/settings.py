@@ -55,6 +55,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -131,7 +132,21 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Include the built React frontend if it exists (after `npm run build`)
+_FRONTEND_DIST = BASE_DIR / 'frontend' / 'dist'
+if _FRONTEND_DIST.exists():
+    STATICFILES_DIRS = [BASE_DIR / 'static', _FRONTEND_DIST]
+
 STATIC_ROOT = Path(os.environ.get("DJANGO_STATIC_ROOT", BASE_DIR / "staticfiles"))
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 
 def _csv_list(value: str) -> list[str]:
@@ -140,6 +155,14 @@ def _csv_list(value: str) -> list[str]:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SITE_ID = int(os.environ.get('DJANGO_SITE_ID', '1'))
+
+# ── Cache (used for rate limiting) ────────────────────────────────────────
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'ai-dashboard',
+    }
+}
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
@@ -198,6 +221,24 @@ SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_flag("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", IS_PRODUCTION)
 SECURE_HSTS_PRELOAD = _env_flag("DJANGO_SECURE_HSTS_PRELOAD", IS_PRODUCTION)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if _env_flag("DJANGO_SECURE_BEHIND_PROXY") else None
+
+# Prevent MIME-type sniffing
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Referrer policy
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# Cross-origin isolation: keeps third-party pages from reusing this browsing context
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+
+# Cookie SameSite (Lax: safe for OAuth redirects, blocks most CSRF)
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+# JS must be able to read the CSRF cookie for AJAX requests
+CSRF_COOKIE_HTTPONLY = False
+
+# Cap upload body size to 5 MB (protects the ingest endpoint)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 
 CSRF_TRUSTED_ORIGINS = _csv_list(os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", ""))
 

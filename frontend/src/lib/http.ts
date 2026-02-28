@@ -1,6 +1,14 @@
 import type { ApiErrorResponse } from '../types/api';
 import { logDebug, logError, logWarn } from './logger';
 
+/** Read a cookie value by name (used for Django's CSRF token). */
+function getCookie(name: string): string {
+  if (typeof document === 'undefined') return '';
+  const escaped = name.replace(/[[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+  const match = document.cookie.match(new RegExp(`(?:^|; )${escaped}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
 export class ApiHttpError<T = unknown> extends Error {
   readonly status: number;
   readonly data: T | undefined;
@@ -55,6 +63,14 @@ export async function requestJson<T>(input: RequestInfo | URL, init: RequestInit
   const headers = new Headers(init.headers);
   if (!headers.has('Accept')) {
     headers.set('Accept', 'application/json');
+  }
+  // Attach Django CSRF token for all mutating requests.
+  const method = (init.method || 'GET').toUpperCase();
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && !headers.has('X-CSRFToken')) {
+    const csrfToken = getCookie('csrftoken');
+    if (csrfToken) {
+      headers.set('X-CSRFToken', csrfToken);
+    }
   }
 
   try {

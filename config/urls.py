@@ -14,11 +14,26 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from pathlib import Path
+
 from django.contrib import admin
-from django.urls import include, path
+from django.http import HttpResponse, Http404
+from django.urls import include, path, re_path
+
+_INDEX_HTML = Path(__file__).resolve().parent.parent / 'frontend' / 'dist' / 'index.html'
+
+
+def _spa_index(request, **kwargs):
+    """Serve the React SPA index.html for all non-API, non-admin routes."""
+    if not _INDEX_HTML.exists():
+        raise Http404("Frontend not built. Run: cd frontend && npm run build")
+    return HttpResponse(_INDEX_HTML.read_bytes(), content_type='text/html; charset=utf-8')
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
     path('', include('monitoring.urls')),
+    # SPA catch-all: any path not matched above goes to React
+    re_path(r'^(?!api/|accounts/|admin/).*$', _spa_index, name='spa_index'),
 ]
