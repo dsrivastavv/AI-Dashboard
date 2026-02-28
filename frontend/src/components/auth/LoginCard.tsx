@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 type AuthMode = 'signin' | 'register' | 'forgot';
+type SignInStep = 'email' | 'password';
 
 interface LoginCardProps {
   showAccessDenied?: boolean;
@@ -43,22 +44,22 @@ function MetricBar({ label, value, color }: { label: string; value: number; colo
 
 const FEATURES = [
   {
-    icon: '⚡',
+    gif: '/gif/lightning.gif',
     title: 'Live telemetry',
     desc: 'GPU, CPU, memory & disk — updated every second.',
   },
   {
-    icon: '🖥️',
+    gif: '/gif/desktop.gif',
     title: 'Multi-server',
     desc: 'Monitor unlimited training nodes from one dashboard.',
   },
   {
-    icon: '🧠',
+    gif: '/gif/brain.gif',
     title: 'AI bottleneck detection',
     desc: 'Automatically surfaces the resource limiting your runs.',
   },
   {
-    icon: '🔔',
+    gif: '/gif/bell.gif',
     title: 'Smart alerts',
     desc: 'Instant notifications on thermal limits & resource saturation.',
   },
@@ -100,9 +101,10 @@ export default function LoginCard({
   onForgotPassword,
 }: LoginCardProps) {
   const [mode, setMode] = useState<AuthMode>('signin');
+  const [siStep, setSiStep] = useState<SignInStep>('email');
 
   // Sign-in fields
-  const [siUsername, setSiUsername] = useState('');
+  const [siEmail, setSiEmail] = useState('');
   const [siPassword, setSiPassword] = useState('');
   const [siShowPass, setSiShowPass] = useState(false);
 
@@ -119,10 +121,16 @@ export default function LoginCard({
   const busy = isCheckingSession || isLoading;
   const passwordMismatch = regConfirm.length > 0 && regPassword !== regConfirm;
 
+  function handleEmailStep(e: React.FormEvent) {
+    e.preventDefault();
+    if (!siEmail.trim()) return;
+    setSiStep('password');
+  }
+
   function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
-    if (!siUsername.trim() || !siPassword) return;
-    onCredentialSignIn(siUsername.trim(), siPassword);
+    if (!siEmail.trim() || !siPassword) return;
+    onCredentialSignIn(siEmail.trim(), siPassword);
   }
 
   function handleRegister(e: React.FormEvent) {
@@ -139,36 +147,26 @@ export default function LoginCard({
 
   function switchMode(m: AuthMode) {
     setMode(m);
+    setSiStep('email');
   }
 
   return (
     <div className="claude-shell">
       <div className="claude-bg-grid" aria-hidden="true" />
 
-      <header className="claude-nav">
-        <div className="claude-brand">
-          <div className="claude-burst" aria-hidden="true" />
-          <span>AI Dashboard</span>
-        </div>
-        <div className="claude-nav-links" aria-hidden="true">
-          <span>Platform</span>
-          <span>Agents</span>
-          <span>Pricing</span>
-          <span>Docs</span>
-        </div>
-        <div className="claude-nav-actions" aria-hidden="true">
-          <button className="claude-ghost">Contact sales</button>
-          <button className="claude-pill">Launch dashboard</button>
-        </div>
-      </header>
-
       <div className="claude-hero">
+        {/* ── Left: login ── */}
         <div className="claude-left">
-          <p className="claude-kicker">Real-time AI infrastructure monitoring</p>
-          <h1 className="claude-title">Your cluster, always in view</h1>
-          <p className="claude-sub">Track GPU, CPU, memory and disk across every training node — from one unified dashboard.</p>
+          <div className="claude-brand">
+            <div className="claude-burst" aria-hidden="true" />
+            <span>AI Dashboard</span>
+          </div>
 
           <div className="claude-card">
+            <h2 className="claude-card-heading">
+              {mode === 'register' ? 'Create account' : mode === 'forgot' ? 'Reset password' : 'Sign in'}
+            </h2>
+
             {showAccessDenied && (
               <div className="claude-alert" role="alert">
                 Access denied. Your Google account is not in the allowlist.
@@ -177,71 +175,90 @@ export default function LoginCard({
             {error && <div className="claude-alert" role="alert">{error}</div>}
             {successMessage && <div className="claude-alert claude-alert--success" role="status">{successMessage}</div>}
 
-            <button
-              type="button"
-              className="claude-google"
-              onClick={onGoogleSignIn}
-              disabled={busy}
-            >
-              <GoogleMark />
-              <span>{isCheckingSession ? 'Checking session…' : 'Continue with Google'}</span>
-            </button>
-
-            <div className="claude-divider">OR</div>
-
             {mode === 'signin' && (
-              <form className="claude-form" onSubmit={handleSignIn} noValidate>
-                <label className="claude-label" htmlFor="si-username">Email or username</label>
-                <input
-                  id="si-username"
-                  className="claude-input"
-                  type="text"
-                  autoComplete="username"
-                  placeholder="you@example.com"
-                  value={siUsername}
-                  onChange={(e) => setSiUsername(e.target.value)}
-                  disabled={busy}
-                />
-
-                <label className="claude-label" htmlFor="si-password">Password</label>
-                <div className="claude-input-wrap">
-                  <input
-                    id="si-password"
-                    className="claude-input"
-                    type={siShowPass ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    value={siPassword}
-                    onChange={(e) => setSiPassword(e.target.value)}
-                    disabled={busy}
-                  />
-                  <button
-                    type="button"
-                    className="claude-eye"
-                    onClick={() => setSiShowPass((v) => !v)}
-                    aria-label={siShowPass ? 'Hide password' : 'Show password'}
-                  >
-                    <EyeIcon open={siShowPass} />
-                  </button>
-                </div>
-
+              <>
                 <button
-                  type="submit"
-                  className="claude-submit"
-                  disabled={busy || !siUsername.trim() || !siPassword}
+                  type="button"
+                  className="claude-google"
+                  onClick={onGoogleSignIn}
+                  disabled={busy}
                 >
-                  {isLoading ? 'Signing in…' : 'Continue with email'}
+                  <GoogleMark />
+                  <span>{isCheckingSession ? 'Checking session…' : 'Continue with Google'}</span>
                 </button>
 
-                <div className="claude-links">
-                  <button type="button" className="claude-link" onClick={() => switchMode('forgot')}>
-                    Forgot password?
-                  </button>
-                  <button type="button" className="claude-link" onClick={() => switchMode('register')}>
-                    Create account
-                  </button>
-                </div>
-              </form>
+                <div className="claude-divider">OR</div>
+
+                {siStep === 'email' ? (
+                  <form className="claude-form" onSubmit={handleEmailStep} noValidate>
+                    <label className="claude-label" htmlFor="si-email">Email</label>
+                    <input
+                      id="si-email"
+                      className="claude-input"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      value={siEmail}
+                      onChange={(e) => setSiEmail(e.target.value)}
+                      disabled={busy}
+                      // eslint-disable-next-line jsx-a11y/no-autofocus
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      className="claude-submit"
+                      disabled={busy || !siEmail.trim()}
+                    >
+                      Continue
+                    </button>
+                    <div className="claude-links">
+                      <button type="button" className="claude-link" onClick={() => switchMode('register')}>
+                        Create account
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <form className="claude-form" onSubmit={handleSignIn} noValidate>
+                    <label className="claude-label" htmlFor="si-password">Password</label>
+                    <div className="claude-input-wrap">
+                      <input
+                        id="si-password"
+                        className="claude-input"
+                        type={siShowPass ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        value={siPassword}
+                        onChange={(e) => setSiPassword(e.target.value)}
+                        disabled={busy}
+                        // eslint-disable-next-line jsx-a11y/no-autofocus
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        className="claude-eye"
+                        onClick={() => setSiShowPass((v) => !v)}
+                        aria-label={siShowPass ? 'Hide password' : 'Show password'}
+                      >
+                        <EyeIcon open={siShowPass} />
+                      </button>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="claude-submit"
+                      disabled={busy || !siPassword}
+                    >
+                      {isLoading ? 'Signing in…' : 'Sign in'}
+                    </button>
+
+                    <div className="claude-links">
+                      <button type="button" className="claude-link" onClick={() => switchMode('forgot')}>
+                        Forgot password?
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </>
             )}
 
             {mode === 'register' && (
@@ -353,17 +370,18 @@ export default function LoginCard({
             )}
 
             <p className="claude-note">
-              By continuing, you agree to AI Dashboard&apos;s Privacy Policy and Terms. We may send important product updates.
+              By continuing, you agree to AI Dashboard&apos;s Privacy Policy and Terms.
             </p>
 
           </div>
-
-          <button className="claude-app-btn" type="button" aria-hidden="true">
-            Install the agent
-          </button>
         </div>
 
+        {/* ── Right: features ── */}
         <div className="claude-right" aria-hidden="true">
+          <p className="claude-kicker">Real-time AI infrastructure monitoring</p>
+          <h2 className="claude-title">Your cluster,<br />always in view</h2>
+          <p className="claude-sub">Track GPU, CPU, memory and disk across every training node — from one unified dashboard.</p>
+
           {/* Server status bar */}
           <div className="claude-preview-header">
             <div className="claude-preview-status">
@@ -392,7 +410,7 @@ export default function LoginCard({
                 className="claude-feature-item"
                 style={{ animationDelay: `${i * 0.1}s` }}
               >
-                <span className="claude-feature-icon">{f.icon}</span>
+                <img className="claude-feature-icon" src={f.gif} alt="" aria-hidden="true" />
                 <div>
                   <p className="claude-feature-title">{f.title}</p>
                   <p className="claude-feature-desc">{f.desc}</p>

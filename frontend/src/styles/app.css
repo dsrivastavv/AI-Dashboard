@@ -5,7 +5,7 @@
 /* ────────────────────────────────────────────
    1. TYPOGRAPHY IMPORTS
    ──────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* ────────────────────────────────────────────
    2. DESIGN TOKENS
@@ -13,6 +13,8 @@
 :root {
   /* Space Grotesk: geometric modern display · Inter: crisp neutral UI body */
   --font-display: 'Space Grotesk', -apple-system, 'SF Pro Display', system-ui, sans-serif;
+  /* Caveat: free-flowing ink script for brand wordmark */
+  --font-brand: 'Caveat', 'Comic Sans MS', cursive;
   --font-body:    'Inter', -apple-system, 'SF Pro Text', system-ui, sans-serif;
   --font-mono:    'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
   --font-special: 'Space Grotesk', 'Inter', sans-serif;
@@ -47,6 +49,18 @@
   --glass-blur: blur(28px) saturate(1.6);
   --glass-blur-heavy: blur(48px) saturate(1.7);
   --glass-blur-light: blur(16px) saturate(1.4);
+
+  /* Easing curves */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);   /* Material standard */
+  --ease-decel:    cubic-bezier(0, 0, 0.2, 1);      /* Enter / expand */
+  --ease-accel:    cubic-bezier(0.4, 0, 1, 1);      /* Exit / collapse */
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1); /* Springy hover lift */
+
+  /* Duration scale */
+  --dur-fast:   150ms;
+  --dur-base:   220ms;
+  --dur-slow:   350ms;
+  --dur-slower: 500ms;
 }
 
 /* ────────────────────────────────────────────
@@ -610,7 +624,7 @@ a {
   font-weight: 500;
   padding: 7px 28px 7px 10px;
   cursor: pointer;
-  transition: border-color 0.15s, background-color 0.15s;
+  transition: border-color var(--dur-base) var(--ease-standard), background-color var(--dur-base) var(--ease-standard);
 }
 
 .sidebar-server-select:hover:not(:disabled) {
@@ -663,7 +677,7 @@ a {
   font-weight: 500;
   color: rgba(170, 190, 230, 0.7);
   text-decoration: none;
-  transition: background 0.12s, color 0.12s;
+  transition: background var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard);
   border: 1px solid transparent;
 }
 
@@ -730,7 +744,7 @@ a {
   border: none;
   background: transparent;
   color: rgba(180, 200, 240, 0.72);
-  transition: all 0.15s;
+  transition: background var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -796,7 +810,7 @@ a {
   border-radius: var(--radius-sm);
   color: rgba(253, 186, 116, 0.9);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard);
 }
 
 @keyframes spin {
@@ -856,7 +870,7 @@ a {
   text-align: center;
   text-decoration: none;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard);
   border: 1px solid transparent;
 }
 
@@ -931,7 +945,7 @@ a {
   background: rgba(249, 115, 22, 0.12);
   color: rgba(253, 186, 116, 0.9);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard);
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -1086,14 +1100,14 @@ a {
   padding: 16px 18px;
   position: relative;
   overflow: hidden;
-  transition: transform 0.18s, box-shadow 0.18s;
+  transition: transform 0.28s var(--ease-spring), box-shadow 0.22s var(--ease-standard);
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
 .metric-card:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
@@ -1177,7 +1191,7 @@ a {
 .metric-bar-fill {
   height: 100%;
   border-radius: 99px;
-  transition: width 0.5s ease;
+  transition: width var(--dur-slower) var(--ease-decel);
 }
 
 .metric-card--cpu    .metric-bar-fill { background: var(--accent-blue); }
@@ -1443,7 +1457,7 @@ a {
   height: 100%;
   border-radius: 99px;
   background: var(--bottleneck-color, var(--entity-cpu));
-  transition: width 0.5s ease;
+  transition: width var(--dur-slower) var(--ease-decel);
 }
 
 .bottleneck-panel--cpu { --bottleneck-color: var(--entity-cpu); }
@@ -2337,7 +2351,7 @@ a {
   height: 100%;
   border-radius: 99px;
   opacity: 0.82;
-  animation: lp-bar-fill 1.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: lp-bar-fill 1.6s cubic-bezier(0, 0, 0.2, 1) both;
 }
 
 /* ── Feature list ─────────────────────────── */
@@ -2445,7 +2459,7 @@ a {
   font-weight: 600;
   color: rgba(155, 182, 218, 0.6);
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  transition: background var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard);
   white-space: nowrap;
   letter-spacing: 0.01em;
 }
@@ -2491,8 +2505,8 @@ a {
   width: 100%;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(15px);
-  transition: opacity 0.35s ease, transform 0.35s ease, visibility 0.35s;
+  transform: translateY(12px);
+  transition: opacity var(--dur-slow) var(--ease-decel), transform var(--dur-slow) var(--ease-decel), visibility var(--dur-slow);
 }
 
 .lp-form-container--signin .lp-form-section--signin,
@@ -2501,7 +2515,7 @@ a {
   opacity: 1;
   transform: translateY(0);
   visibility: visible;
-  transition-delay: 0.1s;
+  transition-delay: 0.08s;
 }
 
 
@@ -2520,7 +2534,7 @@ a {
   font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard), transform var(--dur-base) var(--ease-spring);
   margin-bottom: 18px;
 }
 .lp-google-btn:hover:not(:disabled) {
@@ -2576,7 +2590,7 @@ a {
   font-size: 0.9rem;
   font-family: var(--font-body);
   outline: none;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition: border-color var(--dur-base) var(--ease-standard), background var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard);
 }
 .lp-input:focus {
   border-color: rgba(59, 130, 246, 0.55);
@@ -2629,7 +2643,7 @@ a {
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.12s, box-shadow 0.15s;
+  transition: opacity var(--dur-base) var(--ease-standard), transform 0.2s var(--ease-spring), box-shadow var(--dur-base) var(--ease-standard);
   letter-spacing: 0.08em;
   font-family: var(--font-display);
   text-transform: uppercase;
@@ -3211,7 +3225,7 @@ a {
 .sysinfo-part-bar-fill {
   height: 100%;
   border-radius: 3px;
-  transition: width 0.3s ease;
+  transition: width var(--dur-slow) var(--ease-decel);
 }
 
 .sysinfo-part-bar-pct {
@@ -3421,7 +3435,6 @@ a {
   background: #09090e;
   color: #f4f4f6;
   overflow: hidden;
-  padding: 36px 52px 64px;
   isolation: isolate;
 }
 
@@ -3454,11 +3467,16 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: var(--font-display);
-  font-size: 20px;
+  font-family: var(--font-brand);
+  font-size: 26px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #f4f4f6;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  background: linear-gradient(135deg, #ffd080 0%, #ffb347 45%, #ff8a3d 80%, #ff6b35 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 1px 8px rgba(255, 180, 80, 0.30));
 }
 
 .claude-burst {
@@ -3479,7 +3497,7 @@ a {
 
 .claude-nav-links span {
   cursor: pointer;
-  transition: color 0.15s ease, opacity 0.15s ease;
+  transition: color var(--dur-base) var(--ease-standard), opacity var(--dur-base) var(--ease-standard);
 }
 
 .claude-nav-links span:hover {
@@ -3500,7 +3518,7 @@ a {
   letter-spacing: -0.01em;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, background 120ms ease;
+  transition: transform 0.2s var(--ease-spring), box-shadow var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard), background var(--dur-base) var(--ease-standard);
 }
 
 .claude-ghost {
@@ -3528,18 +3546,23 @@ a {
 .claude-hero {
   position: relative;
   z-index: 2;
-  max-width: 1240px;
-  margin: 44px auto 0;
   display: grid;
-  grid-template-columns: minmax(320px, 460px) minmax(440px, 1fr);
-  gap: 56px;
-  align-items: start;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+  margin: 0;
+  max-width: none;
+  gap: 0;
+  align-items: stretch;
 }
 
 .claude-left {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  padding: 52px 60px;
+  gap: 28px;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .claude-kicker {
@@ -3566,9 +3589,9 @@ a {
 
 .claude-title {
   font-family: var(--font-display);
-  font-size: clamp(36px, 5.2vw, 66px);
+  font-size: clamp(30px, 3.5vw, 54px);
   font-weight: 800;
-  line-height: 1.06;
+  line-height: 1.08;
   margin: 0;
   color: #fdfdfd;
   letter-spacing: -0.03em;
@@ -3582,15 +3605,36 @@ a {
 }
 
 .claude-card {
-  margin-top: 16px;
-  width: min(500px, 100%);
+  width: min(420px, 100%);
   background: linear-gradient(160deg, rgba(20, 21, 28, 0.9) 0%, rgba(12, 13, 18, 0.97) 100%);
   border: 1px solid rgba(255, 255, 255, 0.09);
   box-shadow: 0 28px 72px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   border-radius: 22px;
-  padding: 24px;
+  padding: 28px;
   display: grid;
   gap: 14px;
+}
+
+.claude-card-heading {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #f4f4f6;
+  margin: 0 0 4px;
+}
+
+.claude-email-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: #c8cdd9;
+  gap: 8px;
 }
 
 .claude-alert {
@@ -3623,14 +3667,20 @@ a {
   font-weight: 600;
   font-size: 15px;
   letter-spacing: -0.01em;
-  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  transition: border-color var(--dur-base) var(--ease-standard), transform 0.2s var(--ease-spring), box-shadow var(--dur-base) var(--ease-standard), background var(--dur-base) var(--ease-standard);
 }
 
 .claude-google:hover {
   border-color: rgba(255, 255, 255, 0.22);
   background: rgba(20, 21, 28, 0.9);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.3);
+}
+
+.claude-google:active:not(:disabled) {
+  transform: scale(0.98);
+  box-shadow: none;
+  transition-duration: 80ms;
 }
 
 .claude-google:disabled {
@@ -3659,6 +3709,7 @@ a {
 .claude-form {
   display: grid;
   gap: 10px;
+  animation: claude-step-in 0.3s var(--ease-decel) both;
 }
 
 .claude-label {
@@ -3679,7 +3730,7 @@ a {
   color: #f4f6fb;
   font-size: 14.5px;
   font-family: var(--font-body, 'Inter', sans-serif);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  transition: border-color var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard), background var(--dur-base) var(--ease-standard);
 }
 
 .claude-input::placeholder {
@@ -3730,12 +3781,18 @@ a {
   letter-spacing: -0.01em;
   box-shadow: 0 18px 52px rgba(0, 0, 0, 0.38);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  transition: transform 0.2s var(--ease-spring), box-shadow var(--dur-base) var(--ease-standard), opacity var(--dur-base) var(--ease-standard);
 }
 
 .claude-submit:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+.claude-submit:active:not(:disabled) {
+  transform: scale(0.98);
+  box-shadow: none;
+  transition-duration: 80ms;
 }
 
 .claude-submit:disabled {
@@ -3759,7 +3816,7 @@ a {
   font-weight: 600;
   padding: 6px 0;
   cursor: pointer;
-  transition: color 0.15s ease, opacity 0.15s ease;
+  transition: color var(--dur-base) var(--ease-standard), opacity var(--dur-base) var(--ease-standard);
 }
 
 .claude-link:hover {
@@ -3799,7 +3856,7 @@ a {
   font-weight: 700;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition: border-color var(--dur-base) var(--ease-standard), transform 0.2s var(--ease-spring);
 }
 
 .claude-app-btn:hover {
@@ -3810,14 +3867,10 @@ a {
 .claude-right {
   position: relative;
   background: rgba(12, 13, 20, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  border-radius: 24px;
-  padding: 22px 22px 18px;
+  padding: 52px 60px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  min-height: 440px;
+  gap: 24px;
   overflow: hidden;
 }
 
@@ -3865,8 +3918,8 @@ a {
 }
 
 @keyframes live-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(34, 197, 94, 0.7); }
-  50%       { opacity: 0.6; box-shadow: 0 0 10px rgba(34, 197, 94, 0.5); }
+  0%, 100% { opacity: 1;   box-shadow: 0 0 6px rgba(34, 197, 94, 0.7); transform: scale(1);    }
+  50%       { opacity: 0.55; box-shadow: 0 0 12px rgba(34, 197, 94, 0.4); transform: scale(0.85); }
 }
 
 .claude-preview-server {
@@ -3918,8 +3971,6 @@ a {
   flex-shrink: 0;
 }
 
-/* MetricBar reuses lp-metric-* from the existing CSS */
-
 /* ── Feature highlights grid ─────────────── */
 .claude-feature-grid {
   list-style: none;
@@ -3939,8 +3990,8 @@ a {
   border-radius: 12px;
   padding: 12px 13px;
   opacity: 0;
-  animation: claude-fade-up 0.45s ease forwards;
-  transition: background 0.2s, border-color 0.2s;
+  animation: claude-fade-up 0.5s var(--ease-decel) forwards;
+  transition: background var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard), transform 0.22s var(--ease-standard);
 }
 
 .claude-feature-item:hover {
@@ -3949,15 +4000,22 @@ a {
 }
 
 @keyframes claude-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes claude-step-in {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 .claude-feature-icon {
-  font-size: 18px;
-  line-height: 1;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   margin-top: 1px;
+  object-fit: contain;
+  image-rendering: auto;
 }
 
 .claude-feature-title {
@@ -3977,18 +4035,17 @@ a {
 }
 
 @media (max-width: 1100px) {
-  .claude-shell {
-    padding: 30px 28px 48px;
-  }
-  .claude-nav {
-    flex-wrap: wrap;
-    gap: 14px;
-  }
   .claude-hero {
     grid-template-columns: 1fr;
-    gap: 32px;
+    min-height: auto;
+  }
+  .claude-left {
+    padding: 48px 32px;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
   .claude-right {
+    padding: 48px 32px;
     order: -1;
   }
   .claude-feature-grid {
@@ -3997,22 +4054,31 @@ a {
 }
 
 @media (max-width: 640px) {
-  .claude-shell {
-    padding: 22px 16px 32px;
+  .claude-left,
+  .claude-right {
+    padding: 32px 20px;
   }
   .claude-title {
-    font-size: 40px;
+    font-size: 32px;
   }
   .claude-card {
     padding: 18px;
   }
-  .claude-nav-links {
-    display: none;
-  }
-  .claude-nav-actions {
-    margin-left: auto;
-  }
   .claude-feature-grid {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ============================================================
+   REDUCED MOTION – respect user preference
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration:       0.01ms !important;
+    animation-iteration-count: 1     !important;
+    transition-duration:      0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
