@@ -78,8 +78,14 @@ export interface GpuDeviceMetric {
   memory_used_bytes: number;
   memory_percent: number | null;
   temperature_c: number | null;
+  fan_speed_percent: number | null;
   power_w: number | null;
   power_limit_w: number | null;
+}
+
+export interface FanDeviceMetric {
+  label: string;
+  speed_rpm: number;
 }
 
 export interface DiskDeviceMetric {
@@ -135,6 +141,12 @@ export interface MetricSnapshot {
     tx_bps: number;
   };
   process_count: number;
+  fans: {
+    count: number;
+    max_rpm: number | null;
+    avg_rpm: number | null;
+    devices: FanDeviceMetric[];
+  };
   gpu: {
     present: boolean;
     count: number;
@@ -174,6 +186,7 @@ export interface HistoryPointGpu {
   utilization_gpu_percent: number | null;
   memory_percent: number | null;
   temperature_c: number | null;
+  fan_speed_percent: number | null;
 }
 
 export interface HistoryPointDisk {
@@ -198,9 +211,13 @@ export interface HistoryPoint {
   gpu_top_util_percent: number | null;
   gpu_avg_util_percent: number | null;
   gpu_top_memory_percent: number | null;
+  fan_count: number;
+  fan_max_rpm: number | null;
+  fan_avg_rpm: number | null;
   bottleneck: string;
   gpus: HistoryPointGpu[];
   disks: HistoryPointDisk[];
+  fans: FanDeviceMetric[];
 }
 
 export interface HistoryMetricsResponse {

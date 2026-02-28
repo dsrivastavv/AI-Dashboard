@@ -122,6 +122,12 @@ def _collect_gpu_metrics_nvml() -> list[dict[str, Any]] | None:
                 except Exception:
                     pass
 
+            fan_speed_percent = None
+            try:
+                fan_speed_percent = float(pynvml.nvmlDeviceGetFanSpeed(handle))
+            except Exception:
+                pass
+
             gpus.append(
                 {
                     "gpu_index": idx,
@@ -133,6 +139,7 @@ def _collect_gpu_metrics_nvml() -> list[dict[str, Any]] | None:
                     "memory_used_bytes": mem_used,
                     "memory_percent": mem_percent,
                     "temperature_c": temperature_c,
+                    "fan_speed_percent": fan_speed_percent,
                     "power_w": power_w,
                     "power_limit_w": power_limit_w,
                 }
@@ -149,7 +156,7 @@ def _collect_gpu_metrics_nvml() -> list[dict[str, Any]] | None:
 def _collect_gpu_metrics_nvidia_smi() -> list[dict[str, Any]]:
     cmd = [
         "nvidia-smi",
-        "--query-gpu=index,name,uuid,utilization.gpu,utilization.memory,memory.total,memory.used,temperature.gpu,power.draw,power.limit",
+        "--query-gpu=index,name,uuid,utilization.gpu,utilization.memory,memory.total,memory.used,temperature.gpu,fan.speed,power.draw,power.limit",
         "--format=csv,noheader,nounits",
     ]
     try:
@@ -165,7 +172,7 @@ def _collect_gpu_metrics_nvidia_smi() -> list[dict[str, Any]]:
     gpus: list[dict[str, Any]] = []
     for line in result.stdout.splitlines():
         parts = [part.strip() for part in line.split(",")]
-        if len(parts) < 10:
+        if len(parts) < 11:
             continue
         mem_total_mib = _parse_csv_number(parts[5]) or 0.0
         mem_used_mib = _parse_csv_number(parts[6]) or 0.0
@@ -183,8 +190,9 @@ def _collect_gpu_metrics_nvidia_smi() -> list[dict[str, Any]]:
                 "memory_used_bytes": mem_used_bytes,
                 "memory_percent": mem_percent,
                 "temperature_c": _parse_csv_number(parts[7]),
-                "power_w": _parse_csv_number(parts[8]),
-                "power_limit_w": _parse_csv_number(parts[9]),
+                "fan_speed_percent": _parse_csv_number(parts[8]),
+                "power_w": _parse_csv_number(parts[9]),
+                "power_limit_w": _parse_csv_number(parts[10]) if len(parts) > 10 else None,
             }
         )
     return gpus
@@ -203,6 +211,64 @@ def _safe_loadavg() -> tuple[float | None, float | None, float | None]:
         return float(load1), float(load5), float(load15)
     except (AttributeError, OSError):
         return None, None, None
+
+
+def _collect_fan_speeds() -> list[dict[str, Any]]:
+    # Primary: psutil sensors
+    try:
+        sensors = psutil.sensors_fans()
+    except (AttributeError, NotImplementedError):
+        sensors = {}
+    except Exception:
+        sensors = {}
+
+    fans: list[dict[str, Any]] = []
+    if sensors:
+        for name, entries in sensors.items():
+            for entry in entries:
+                current = getattr(entry, "current", None)
+                if current is None:
+                    continue
+                label = (getattr(entry, "label", "") or name or "Fan").strip() or "Fan"
+                try:
+                    rpm = int(current)
+                except Exception:
+                    continue
+                fans.append({"label": label[:64], "speed_rpm": rpm})
+        if fans:
+            return fans
+
+    # Fallback: in-band IPMI via ipmitool -I open
+    try:
+        result = subprocess.run(
+            ["ipmitool", "-I", "open", "sdr", "type", "Fan"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return []
+
+    if result.returncode != 0 or not result.stdout:
+        return []
+
+    for line in result.stdout.splitlines():
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 5:
+            continue
+        label = parts[0] or "Fan"
+        reading = parts[-1]
+        if "RPM" not in reading or "No Reading" in reading:
+            continue
+        num_part = reading.split("RPM", 1)[0].strip()
+        try:
+            rpm = int(float(num_part))
+        except Exception:
+            continue
+        fans.append({"label": label[:64], "speed_rpm": rpm})
+
+    return fans
 
 
 def _read_cpu_temperature_c() -> float | None:
@@ -364,6 +430,7 @@ def collect_raw_metrics(
 
     net = psutil.net_io_counters(nowrap=True)
     gpus = collect_gpu_metrics()
+    fans = _collect_fan_speeds()
     return {
         "collected_at": datetime.now(timezone.utc).isoformat(),
         "cpu_usage_percent": cpu_usage_percent,
@@ -389,4 +456,5 @@ def collect_raw_metrics(
         "process_count": len(psutil.pids()),
         "disks": disk_rows,
         "gpus": gpus,
+        "fans": fans,
     }

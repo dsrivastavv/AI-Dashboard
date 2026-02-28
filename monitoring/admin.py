@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import DiskMetric, GpuMetric, MetricSnapshot, MonitoredServer
+from .models import DiskMetric, FanMetric, GpuMetric, MetricSnapshot, MonitoredServer
 
 
 @admin.register(MonitoredServer)
@@ -49,6 +49,7 @@ class GpuMetricInline(admin.TabularInline):
         "utilization_memory_percent",
         "memory_percent",
         "temperature_c",
+        "fan_speed_percent",
         "power_w",
     )
     readonly_fields = fields
@@ -59,6 +60,14 @@ class DiskMetricInline(admin.TabularInline):
     extra = 0
     can_delete = False
     fields = ("device", "read_bps", "write_bps", "read_iops", "write_iops", "util_percent")
+    readonly_fields = fields
+
+
+class FanMetricInline(admin.TabularInline):
+    model = FanMetric
+    extra = 0
+    can_delete = False
+    fields = ("label", "speed_rpm")
     readonly_fields = fields
 
 
@@ -78,5 +87,5 @@ class MetricSnapshotAdmin(admin.ModelAdmin):
     )
     list_filter = ("server", "bottleneck", "gpu_present")
     search_fields = ("bottleneck_reason", "server__name", "server__slug")
-    inlines = [GpuMetricInline, DiskMetricInline]
+    inlines = [GpuMetricInline, DiskMetricInline, FanMetricInline]
     readonly_fields = [field.name for field in MetricSnapshot._meta.fields]

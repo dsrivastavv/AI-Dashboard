@@ -90,10 +90,18 @@ def _serialize_snapshot(snapshot: MetricSnapshot) -> dict[str, Any]:
             "memory_used_bytes": gpu.memory_used_bytes,
             "memory_percent": gpu.memory_percent,
             "temperature_c": gpu.temperature_c,
+            "fan_speed_percent": gpu.fan_speed_percent,
             "power_w": gpu.power_w,
             "power_limit_w": gpu.power_limit_w,
         }
         for gpu in snapshot.gpus.all()
+    ]
+    fans = [
+        {
+            "label": fan.label,
+            "speed_rpm": fan.speed_rpm,
+        }
+        for fan in snapshot.fans.all()
     ]
     disks = [
         {
@@ -150,6 +158,12 @@ def _serialize_snapshot(snapshot: MetricSnapshot) -> dict[str, Any]:
             "tx_bps": snapshot.network_tx_bps,
         },
         "process_count": snapshot.process_count,
+        "fans": {
+            "count": snapshot.fan_count,
+            "max_rpm": snapshot.fan_max_rpm,
+            "avg_rpm": snapshot.fan_avg_rpm,
+            "devices": fans,
+        },
         "gpu": {
             "present": snapshot.gpu_present,
             "count": snapshot.gpu_count,
@@ -263,7 +277,7 @@ def api_metrics_latest(request):
     snapshot = (
         MetricSnapshot.objects.filter(server=selected_server)
         .order_by("-collected_at")
-        .prefetch_related("gpus", "disks", "server")
+        .prefetch_related("gpus", "disks", "fans", "server")
         .first()
     )
     if snapshot is None:
@@ -319,7 +333,7 @@ def api_metrics_history(request):
     snapshots = list(
         MetricSnapshot.objects.filter(server=selected_server, collected_at__gte=since)
         .order_by("collected_at")
-        .prefetch_related("gpus", "disks")
+        .prefetch_related("gpus", "disks", "fans")
     )
 
     max_points = 1500
@@ -346,6 +360,9 @@ def api_metrics_history(request):
                 "gpu_top_util_percent": snap.top_gpu_util_percent,
                 "gpu_avg_util_percent": snap.avg_gpu_util_percent,
                 "gpu_top_memory_percent": snap.top_gpu_memory_percent,
+                "fan_count": snap.fan_count,
+                "fan_max_rpm": snap.fan_max_rpm,
+                "fan_avg_rpm": snap.fan_avg_rpm,
                 "bottleneck": snap.bottleneck,
                 "gpus": [
                     {
@@ -353,8 +370,16 @@ def api_metrics_history(request):
                         "utilization_gpu_percent": gpu.utilization_gpu_percent,
                         "memory_percent": gpu.memory_percent,
                         "temperature_c": gpu.temperature_c,
+                        "fan_speed_percent": gpu.fan_speed_percent,
                     }
                     for gpu in snap.gpus.all()
+                ],
+                "fans": [
+                    {
+                        "label": fan.label,
+                        "speed_rpm": fan.speed_rpm,
+                    }
+                    for fan in snap.fans.all()
                 ],
                 "disks": [
                     {

@@ -126,6 +126,10 @@ class MetricSnapshot(models.Model):
 
     process_count = models.IntegerField(default=0)
 
+    fan_count = models.IntegerField(default=0)
+    fan_max_rpm = models.FloatField(null=True, blank=True)
+    fan_avg_rpm = models.FloatField(null=True, blank=True)
+
     gpu_present = models.BooleanField(default=False)
     gpu_count = models.IntegerField(default=0)
     top_gpu_util_percent = models.FloatField(null=True, blank=True)
@@ -163,6 +167,7 @@ class GpuMetric(models.Model):
     memory_percent = models.FloatField(null=True, blank=True)
 
     temperature_c = models.FloatField(null=True, blank=True)
+    fan_speed_percent = models.FloatField(null=True, blank=True)
     power_w = models.FloatField(null=True, blank=True)
     power_limit_w = models.FloatField(null=True, blank=True)
 
@@ -207,3 +212,20 @@ class DiskMetric(models.Model):
 
     def __str__(self) -> str:
         return f"{self.device} @ {self.snapshot.collected_at.isoformat()}"
+
+
+class FanMetric(models.Model):
+    snapshot = models.ForeignKey(MetricSnapshot, on_delete=models.CASCADE, related_name="fans")
+    label = models.CharField(max_length=64)
+    speed_rpm = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ["label"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["snapshot", "label"], name="uniq_fan_metric_per_snapshot_label"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.label} @ {self.snapshot.collected_at.isoformat()}"

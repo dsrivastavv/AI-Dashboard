@@ -14,7 +14,7 @@ from django.db import transaction
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
 
-from monitoring.models import DiskMetric, GpuMetric, MetricSnapshot, MonitoredServer
+from monitoring.models import DiskMetric, FanMetric, GpuMetric, MetricSnapshot, MonitoredServer
 
 
 PHYSICAL_DISK_RE = re.compile(r"^(nvme\d+n\d+|sd[a-z]+|vd[a-z]+|xvd[a-z]+|md\d+)$")
@@ -135,6 +135,12 @@ def _collect_gpu_metrics_nvml() -> list[dict[str, Any]] | None:
                 except Exception:
                     pass
 
+            fan_speed_percent = None
+            try:
+                fan_speed_percent = float(pynvml.nvmlDeviceGetFanSpeed(handle))
+            except Exception:
+                pass
+
             gpus.append(
                 {
                     "gpu_index": idx,
@@ -146,6 +152,7 @@ def _collect_gpu_metrics_nvml() -> list[dict[str, Any]] | None:
                     "memory_used_bytes": mem_used,
                     "memory_percent": mem_percent,
                     "temperature_c": temperature_c,
+                    "fan_speed_percent": fan_speed_percent,
                     "power_w": power_w,
                     "power_limit_w": power_limit_w,
                 }
@@ -162,7 +169,7 @@ def _collect_gpu_metrics_nvml() -> list[dict[str, Any]] | None:
 def _collect_gpu_metrics_nvidia_smi() -> list[dict[str, Any]]:
     cmd = [
         "nvidia-smi",
-        "--query-gpu=index,name,uuid,utilization.gpu,utilization.memory,memory.total,memory.used,temperature.gpu,power.draw,power.limit",
+        "--query-gpu=index,name,uuid,utilization.gpu,utilization.memory,memory.total,memory.used,temperature.gpu,fan.speed,power.draw,power.limit",
         "--format=csv,noheader,nounits",
     ]
     try:
@@ -182,7 +189,7 @@ def _collect_gpu_metrics_nvidia_smi() -> list[dict[str, Any]]:
     gpus: list[dict[str, Any]] = []
     for line in result.stdout.splitlines():
         parts = [part.strip() for part in line.split(",")]
-        if len(parts) < 10:
+        if len(parts) < 11:
             continue
         mem_total_mib = _parse_csv_number(parts[5]) or 0.0
         mem_used_mib = _parse_csv_number(parts[6]) or 0.0
@@ -200,8 +207,9 @@ def _collect_gpu_metrics_nvidia_smi() -> list[dict[str, Any]]:
                 "memory_used_bytes": mem_used_bytes,
                 "memory_percent": mem_percent,
                 "temperature_c": _parse_csv_number(parts[7]),
-                "power_w": _parse_csv_number(parts[8]),
-                "power_limit_w": _parse_csv_number(parts[9]),
+                "fan_speed_percent": _parse_csv_number(parts[8]),
+                "power_w": _parse_csv_number(parts[9]),
+                "power_limit_w": _parse_csv_number(parts[10]) if len(parts) > 10 else None,
             }
         )
     return gpus
@@ -212,6 +220,65 @@ def collect_gpu_metrics() -> list[dict[str, Any]]:
     if metrics is not None:
         return metrics
     return _collect_gpu_metrics_nvidia_smi()
+
+
+def _collect_fan_speeds() -> list[dict[str, Any]]:
+    # 1) Try psutil sensors
+    try:
+        sensors = psutil.sensors_fans()
+    except (AttributeError, NotImplementedError):
+        sensors = {}
+    except Exception:
+        sensors = {}
+
+    fans: list[dict[str, Any]] = []
+    if sensors:
+        for name, entries in sensors.items():
+            for entry in entries:
+                current = getattr(entry, "current", None)
+                if current is None:
+                    continue
+                label = (getattr(entry, "label", "") or name or "Fan").strip() or "Fan"
+                try:
+                    rpm = int(current)
+                except Exception:
+                    continue
+                fans.append({"label": label[:64], "speed_rpm": rpm})
+        if fans:
+            return fans
+
+    # 2) Fallback to in-band IPMI if available (passwordless via -I open)
+    try:
+        result = subprocess.run(
+            ["ipmitool", "-I", "open", "sdr", "type", "Fan"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return []
+
+    if result.returncode != 0 or not result.stdout:
+        return []
+
+    for line in result.stdout.splitlines():
+        # Expected format: NAME | id | status | xx.x | 1234 RPM
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 5:
+            continue
+        label = parts[0] or "Fan"
+        reading = parts[-1]
+        if "RPM" not in reading or "No Reading" in reading:
+            continue
+        num_part = reading.split("RPM", 1)[0].strip()
+        try:
+            rpm = int(float(num_part))
+        except Exception:
+            continue
+        fans.append({"label": label[:64], "speed_rpm": rpm})
+
+    return fans
 
 
 def _safe_loadavg() -> tuple[float | None, float | None, float | None]:
@@ -297,6 +364,7 @@ def collect_raw_metrics() -> dict[str, Any]:
 
     net = psutil.net_io_counters(nowrap=True)
     gpus = collect_gpu_metrics()
+    fans = _collect_fan_speeds()
 
     return {
         "collected_at": timezone.now(),
@@ -323,6 +391,7 @@ def collect_raw_metrics() -> dict[str, Any]:
         "process_count": len(psutil.pids()),
         "disks": disk_rows,
         "gpus": gpus,
+        "fans": fans,
     }
 
 
@@ -452,6 +521,7 @@ def _normalize_raw_metrics(raw: dict[str, Any]) -> dict[str, Any]:
     raw = dict(raw or {})
     disks = raw.get("disks") or []
     gpus = raw.get("gpus") or []
+    fans = raw.get("fans") or []
     normalized_disks: list[dict[str, Any]] = []
     for disk in disks:
         if not isinstance(disk, dict):
@@ -485,8 +555,21 @@ def _normalize_raw_metrics(raw: dict[str, Any]) -> dict[str, Any]:
                 "memory_used_bytes": _to_int(gpu.get("memory_used_bytes", 0)),
                 "memory_percent": _to_float(gpu.get("memory_percent")),
                 "temperature_c": _to_float(gpu.get("temperature_c")),
+                "fan_speed_percent": _to_float(gpu.get("fan_speed_percent")),
                 "power_w": _to_float(gpu.get("power_w")),
                 "power_limit_w": _to_float(gpu.get("power_limit_w")),
+            }
+        )
+
+    normalized_fans: list[dict[str, Any]] = []
+    for fan in fans:
+        if not isinstance(fan, dict):
+            continue
+        label = str(fan.get("label", "Fan")).strip() or "Fan"
+        normalized_fans.append(
+            {
+                "label": label[:64],
+                "speed_rpm": _to_int(fan.get("speed_rpm", 0)),
             }
         )
 
@@ -515,6 +598,7 @@ def _normalize_raw_metrics(raw: dict[str, Any]) -> dict[str, Any]:
         "process_count": _to_int(raw.get("process_count", 0)),
         "disks": normalized_disks,
         "gpus": normalized_gpus,
+        "fans": normalized_fans,
     }
 
 
@@ -587,6 +671,13 @@ def store_raw_metrics_for_server(
 
     disk_max_util = max(disk_utils) if disk_utils else 0.0
     disk_avg_util = (sum(disk_utils) / len(disk_utils)) if disk_utils else 0.0
+
+    fans = raw.get("fans", [])
+    fan_speeds = [fan.get("speed_rpm") for fan in fans if fan.get("speed_rpm") is not None]
+    fan_count = len(fans)
+    fan_max_rpm = max(fan_speeds) if fan_speeds else None
+    fan_avg_rpm = (sum(fan_speeds) / len(fan_speeds)) if fan_speeds else None
+
     bottleneck, confidence, reason = _classify_bottleneck(
         cpu_usage_percent=raw["cpu_usage_percent"],
         cpu_iowait_percent=raw["cpu_iowait_percent"],
@@ -632,6 +723,9 @@ def store_raw_metrics_for_server(
             network_rx_bytes_total=raw["network_rx_bytes_total"],
             network_tx_bytes_total=raw["network_tx_bytes_total"],
             process_count=raw["process_count"],
+            fan_count=fan_count,
+            fan_max_rpm=fan_max_rpm,
+            fan_avg_rpm=fan_avg_rpm,
             gpu_present=bool(gpus),
             gpu_count=len(gpus),
             top_gpu_util_percent=top_gpu_util,
@@ -660,6 +754,7 @@ def store_raw_metrics_for_server(
                 memory_used_bytes=gpu.get("memory_used_bytes", 0) or 0,
                 memory_percent=gpu.get("memory_percent"),
                 temperature_c=gpu.get("temperature_c"),
+                fan_speed_percent=gpu.get("fan_speed_percent"),
                 power_w=gpu.get("power_w"),
                 power_limit_w=gpu.get("power_limit_w"),
             )
@@ -667,6 +762,13 @@ def store_raw_metrics_for_server(
         ]
         if gpu_rows:
             GpuMetric.objects.bulk_create(gpu_rows)
+
+        fan_rows = [
+            FanMetric(snapshot=snapshot, label=fan["label"], speed_rpm=fan.get("speed_rpm", 0))
+            for fan in fans
+        ]
+        if fan_rows:
+            FanMetric.objects.bulk_create(fan_rows)
 
         days = settings.MONITORING_RETENTION_DAYS if retention_days is None else retention_days
         if days and days > 0:
