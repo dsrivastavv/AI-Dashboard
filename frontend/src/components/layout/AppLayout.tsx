@@ -42,7 +42,7 @@ export default function AppLayout() {
   const data = useDashboardData({
     server: requestedServer,
     minutes: fetchMinutes,
-    liveRefreshEnabled: location.pathname === '/dashboard',
+    liveRefreshEnabled: location.pathname === '/dashboard' || location.pathname === '/system',
   });
 
   const selectedServerSlug = data.selectedServer?.slug ?? requestedServer;
@@ -95,12 +95,17 @@ export default function AppLayout() {
   }
 
   const isOnTerminal = location.pathname === '/terminal';
+  const isOnSystemInfo = location.pathname === '/system';
   const title = isOnTerminal
     ? 'Terminal'
-    : (data.selectedServer ? data.selectedServer.name : 'Operations Center');
+    : isOnSystemInfo
+      ? 'System Information'
+      : (data.selectedServer ? data.selectedServer.name : 'Operations Center');
   const subtitle = isOnTerminal
     ? 'Interactive shell'
-    : (data.selectedServer ? (data.selectedServer.hostname ?? data.selectedServer.slug) : 'Select a server to begin monitoring');
+    : isOnSystemInfo
+      ? (data.selectedServer ? `${data.selectedServer.hostname || data.selectedServer.slug} — static details` : 'Select a server')
+      : (data.selectedServer ? (data.selectedServer.hostname ?? data.selectedServer.slug) : 'Select a server to begin monitoring');
 
   if (data.isInitialLoading && !isOnTerminal) {
     return (

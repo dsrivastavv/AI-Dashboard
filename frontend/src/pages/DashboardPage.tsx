@@ -91,6 +91,15 @@ export default function DashboardPage() {
           <SummaryCards snapshot={latestSnapshot} />
 
           <div className="row g-3">
+            <div className="col-12 col-xxl-7">
+              <GpuTable gpus={latestSnapshot.gpu.devices} />
+            </div>
+            <div className="col-12 col-xxl-5">
+              <DiskTable disks={latestSnapshot.disk.devices} />
+            </div>
+          </div>
+
+          <div className="row g-3">
             <div className="col-12 col-xxl-8 d-flex flex-column gap-3">
               {data.history.data ? (
                 <HistoryCharts
@@ -136,15 +145,6 @@ export default function DashboardPage() {
             <div className="col-12 col-xxl-4 d-flex flex-column gap-3">
               <SnapshotInsightsPanel snapshot={latestSnapshot} />
               <BottleneckPanel bottleneck={latestSnapshot.bottleneck} />
-            </div>
-          </div>
-
-          <div className="row g-3">
-            <div className="col-12 col-xxl-7">
-              <GpuTable gpus={latestSnapshot.gpu.devices} />
-            </div>
-            <div className="col-12 col-xxl-5">
-              <DiskTable disks={latestSnapshot.disk.devices} />
             </div>
           </div>
         </>

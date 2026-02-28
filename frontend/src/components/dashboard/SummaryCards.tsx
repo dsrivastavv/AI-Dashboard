@@ -55,7 +55,9 @@ export default function SummaryCards({ snapshot }: SummaryCardsProps) {
     ? `${snapshot.cpu.count_logical} threads`
     : undefined;
   const cpuLoadMeta = `Load ${formatNumber(snapshot.cpu.load_1, 2)}`;
-  const cpuTempHint = 'Temp -';
+  const cpuTempHint = snapshot.cpu.temperature_c == null
+    ? 'Temp -'
+    : `Temp ${formatNumber(snapshot.cpu.temperature_c)}°C`;
   const memoryMeta = `${formatBytes(snapshot.memory.used_bytes)} / ${formatBytes(snapshot.memory.total_bytes)}`;
   const networkValue = formatThroughput(snapshot.network.rx_bps + snapshot.network.tx_bps);
   const networkMeta = `↓ ${formatThroughput(snapshot.network.rx_bps)}`;

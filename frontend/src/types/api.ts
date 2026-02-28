@@ -6,6 +6,54 @@ export interface ApiErrorResponse {
   [key: string]: unknown;
 }
 
+export interface SystemInfoPartition {
+  device: string;
+  mountpoint: string;
+  fstype: string;
+  total_bytes: number;
+  used_bytes: number;
+  free_bytes: number;
+  percent: number;
+}
+
+export interface SystemInfoNetworkInterface {
+  name: string;
+  ipv4: string | null;
+  ipv6: string | null;
+}
+
+export interface AgentSystemInfo {
+  os_name: string;
+  os_release: string;
+  os_version: string;
+  machine: string;
+  processor: string;
+  cpu_model: string;
+  hostname: string;
+  cpu_count_logical: number;
+  cpu_count_physical: number | null;
+  memory_total_bytes: number;
+  swap_total_bytes: number;
+  boot_time: string;
+  uptime_seconds: number;
+  python_version: string;
+  platform_full: string;
+  partitions: SystemInfoPartition[];
+  interfaces: SystemInfoNetworkInterface[];
+}
+
+export interface AgentInfo {
+  version?: string;
+  hostname?: string;
+  platform?: string;
+  python?: string;
+  pid?: number;
+  labels?: Record<string, string>;
+  disk_filters?: string[];
+  system_info?: AgentSystemInfo;
+  [key: string]: unknown;
+}
+
 export interface ServerSummary {
   id: number;
   slug: string;
@@ -17,6 +65,7 @@ export interface ServerSummary {
   last_agent_version: string;
   snapshot_count?: number | null;
   latest_snapshot_at?: string | null;
+  agent_info?: AgentInfo;
 }
 
 export interface GpuDeviceMetric {
@@ -59,6 +108,7 @@ export interface MetricSnapshot {
     load_5: number | null;
     load_15: number | null;
     frequency_mhz: number | null;
+    temperature_c: number | null;
     count_logical: number;
     count_physical: number | null;
   };

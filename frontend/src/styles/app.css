@@ -86,27 +86,27 @@
    4. LIGHT THEME
    ──────────────────────────────────────────── */
 .theme-light {
-  /* macOS Sonoma light – cool-white with subtle lavender undertone */
-  --bg-base:     #dfe2e8;
-  --bg-surface:  rgba(255, 255, 255, 0.82);
-  --bg-raised:   rgba(248, 248, 252, 0.9);
-  --bg-elevated: rgba(238, 238, 246, 0.95);
-  --sidebar-bg:  rgba(10, 10, 15, 0.94); /* sidebar always dark glass */
+  /* Seattle green – Pacific Northwest forest tones */
+  --bg-base:     #d2e5d8;
+  --bg-surface:  rgba(236, 248, 240, 0.85);
+  --bg-raised:   rgba(228, 244, 234, 0.9);
+  --bg-elevated: rgba(218, 240, 226, 0.95);
+  --sidebar-bg:  rgba(200, 228, 210, 0.96);
 
   --border-color:  rgba(0, 0, 0, 0.10);
   --border-strong: rgba(0, 0, 0, 0.18);
-  --border-accent: rgba(74, 135, 248, 0.38);
+  --border-accent: rgba(45, 106, 79, 0.38);
 
-  --text-primary:   #1a1d26;
-  --text-secondary: #46566e;
-  --text-muted:     #6b7a92;
+  --text-primary:   #0f1f17;
+  --text-secondary: #2e4d3a;
+  --text-muted:     #527060;
   --text-on-accent: #ffffff;
 
   --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   --shadow-lg: 0 8px 48px rgba(0, 0, 0, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.85);
 
-  --glass-surface:   rgba(255, 255, 255, 0.70);
+  --glass-surface:   rgba(230, 248, 236, 0.72);
   --glass-border:    rgba(0, 0, 0, 0.07);
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.95);
 
@@ -169,9 +169,9 @@ a {
 
 .theme-light.app-root {
   background:
-    radial-gradient(ellipse 110% 50% at 10% -5%, rgba(59, 130, 246, 0.07) 0%, transparent 50%),
-    radial-gradient(ellipse 75% 60% at 88% 110%, rgba(139, 92, 246, 0.05) 0%, transparent 48%),
-    #dfe2e8;
+    radial-gradient(ellipse 110% 50% at 10% -5%, rgba(45, 106, 79, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 75% 60% at 88% 110%, rgba(64, 145, 108, 0.09) 0%, transparent 48%),
+    #d2e5d8;
 }
 
 /* ── Sidebar ── */
@@ -921,6 +921,9 @@ a {
   position: relative;
   overflow: hidden;
   transition: transform 0.18s, box-shadow 0.18s;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .metric-card:hover {
@@ -1021,20 +1024,22 @@ a {
 .metric-meta-row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 4px;
-  margin-top: 2px;
+  margin-top: auto;
 }
 
 .metric-meta {
   font-size: 0.76rem;
   color: var(--text-secondary);
+  line-height: 1.2;
 }
 
 .metric-hint {
-  font-size: 0.73rem;
+  font-size: 0.76rem;
   color: var(--text-muted);
   text-align: right;
+  line-height: 1.2;
 }
 
 /* High severity coloring */
@@ -1636,10 +1641,131 @@ a {
 }
 
 .theme-light .app-topbar {
-  background: rgba(220, 225, 235, 0.72);
+  background: rgba(190, 222, 202, 0.75);
   backdrop-filter: var(--glass-blur-heavy);
   -webkit-backdrop-filter: var(--glass-blur-heavy);
   border-bottom-color: rgba(0, 0, 0, 0.07);
+}
+
+/* ── Light sidebar overrides ── */
+.theme-light .app-sidebar {
+  border-right-color: rgba(0, 0, 0, 0.09);
+}
+
+.theme-light .sidebar-brand {
+  border-bottom-color: rgba(0, 0, 0, 0.07);
+}
+
+.theme-light .sidebar-brand-name {
+  color: #0f1f17;
+}
+
+.theme-light .sidebar-brand-tagline {
+  color: rgba(15, 50, 35, 0.65);
+}
+
+.theme-light .sidebar-brand-by {
+  color: rgba(15, 50, 35, 0.42);
+}
+
+.theme-light .sidebar-section {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+.theme-light .sidebar-section-label {
+  color: rgba(15, 55, 35, 0.52);
+}
+
+.theme-light .sidebar-subtitle {
+  color: rgba(15, 55, 35, 0.62);
+}
+
+.theme-light .sidebar-server-select {
+  background-color: rgba(255, 255, 255, 0.55);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(20,80,50,0.65)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  border-color: rgba(0, 0, 0, 0.13);
+  color: #0f1f17;
+}
+
+.theme-light .sidebar-server-select:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.78);
+  border-color: rgba(45, 106, 79, 0.5);
+}
+
+.theme-light .sidebar-server-select option {
+  background-color: #dff0e5;
+  color: #0f1f17;
+}
+
+.theme-light .sidebar-tab {
+  color: rgba(20, 55, 38, 0.6);
+}
+
+.theme-light .sidebar-tab:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(10, 40, 25, 0.85);
+}
+
+.theme-light .sidebar-tab.is-active {
+  background: rgba(45, 106, 79, 0.14);
+  border-color: rgba(45, 106, 79, 0.28);
+  color: #1a5c38;
+}
+
+.theme-light .sidebar-refresh-btn {
+  background: rgba(45, 106, 79, 0.12);
+  border-color: rgba(45, 106, 79, 0.25);
+  color: rgba(20, 90, 55, 0.88);
+}
+
+.theme-light .sidebar-refresh-btn:hover:not(:disabled) {
+  background: rgba(45, 106, 79, 0.20);
+  color: #145c34;
+}
+
+.theme-light .sidebar-segmented {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.10);
+}
+
+.theme-light .sidebar-segmented .btn {
+  color: rgba(20, 55, 38, 0.65);
+}
+
+.theme-light .sidebar-segmented .btn.is-selected {
+  background: rgba(45, 106, 79, 0.20);
+  color: #145c34;
+}
+
+.theme-light .sidebar-segmented .btn:hover:not(.is-selected) {
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(15, 50, 30, 0.78);
+}
+
+.theme-light .sidebar-session {
+  border-top-color: rgba(0, 0, 0, 0.07);
+}
+
+.theme-light .sidebar-session-btn--primary {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.18);
+  color: rgba(160, 20, 20, 0.85);
+}
+
+.theme-light .sidebar-session-btn--primary:hover {
+  background: rgba(220, 38, 38, 0.14);
+  color: #b91c1c;
+}
+
+.theme-light .sidebar-session-btn--secondary {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.10);
+  color: rgba(20, 55, 38, 0.70);
+}
+
+.theme-light .sidebar-session-btn--secondary:hover {
+  background: rgba(0, 0, 0, 0.09);
+  color: rgba(10, 40, 25, 0.88);
 }
 
 .theme-light .panel-head {
@@ -2369,4 +2495,324 @@ a {
   outline: 2px solid rgba(74, 135, 248, 0.6);
   outline-offset: 2px;
   border-radius: 3px;
+}
+
+/* ────────────────────────────────────────────
+   25. SYSTEM INFO PAGE
+   ──────────────────────────────────────────── */
+
+/* Page wrapper */
+.sysinfo-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Page header ── */
+.sysinfo-page-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: var(--radius-lg);
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.sysinfo-page-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: rgba(74, 135, 248, 0.15);
+  color: var(--accent-blue);
+  flex-shrink: 0;
+}
+
+.sysinfo-page-header-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.sysinfo-page-header-sub {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sysinfo-page-header-sep {
+  color: var(--text-muted);
+  user-select: none;
+}
+
+/* ── Card shell ── */
+.sysinfo-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sysinfo-card--fill {
+  /* When used inside a d-flex column, fill available height */
+  flex: 1;
+}
+
+.sysinfo-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px 11px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.sysinfo-card-head-icon {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.sysinfo-card-head-title {
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.sysinfo-card-body {
+  padding: 14px 18px 16px;
+}
+
+.sysinfo-card-body--fill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Info rows grid ── */
+.sysinfo-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Distribute rows evenly when the card is in fill mode */
+.sysinfo-grid--fill {
+  flex: 1;
+  justify-content: space-between;
+}
+
+.sysinfo-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-color);
+  gap: 12px;
+  min-height: 34px;
+}
+
+.sysinfo-row:last-child {
+  border-bottom: none;
+}
+
+.sysinfo-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.sysinfo-value {
+  font-size: 0.81rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: right;
+  word-break: break-word;
+  max-width: 62%;
+  line-height: 1.4;
+}
+
+.sysinfo-value--mono {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+
+.sysinfo-value--accent {
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+/* ── Section dividers inside a card ── */
+.sysinfo-section-divider {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 0 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 0;
+  user-select: none;
+}
+
+/* ── Partition table ── */
+.sysinfo-table {
+  font-size: 0.81rem;
+  color: var(--text-primary);
+}
+
+.sysinfo-table thead th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  padding: 6px 10px;
+  background: transparent;
+}
+
+.sysinfo-table tbody td {
+  padding: 8px 10px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sysinfo-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.sysinfo-code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: transparent;
+  padding: 0;
+}
+
+.sysinfo-num {
+  font-family: var(--font-mono);
+  font-size: 0.79rem;
+  color: var(--text-primary);
+}
+
+.sysinfo-fs-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.sysinfo-empty {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Usage bar in partition table */
+.sysinfo-part-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sysinfo-part-bar-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.sysinfo-part-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.sysinfo-part-bar-pct {
+  font-size: 0.74rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Network interfaces ── */
+.sysinfo-iface-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.sysinfo-iface-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.sysinfo-iface-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 7px;
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
+}
+
+.sysinfo-iface-addr {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.sysinfo-iface-addr:last-child {
+  margin-bottom: 0;
+}
+
+.sysinfo-iface-proto {
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  width: 30px;
+}
+
+.sysinfo-iface-ip {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  word-break: break-all;
+  background: transparent;
+  padding: 0;
+}
+
+.sysinfo-iface-ip--v6 {
+  font-size: 0.71rem;
+  color: var(--text-muted);
 }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import re
 import subprocess
 import warnings
@@ -204,6 +205,131 @@ def _safe_loadavg() -> tuple[float | None, float | None, float | None]:
         return None, None, None
 
 
+def _read_cpu_temperature_c() -> float | None:
+    try:
+        readings = psutil.sensors_temperatures(fahrenheit=False)
+    except (AttributeError, NotImplementedError):
+        return None
+    except Exception:
+        return None
+
+    if not readings:
+        return None
+
+    preferred = []
+    fallback = []
+    cpu_sensor_names = {"coretemp", "k10temp", "cpu-thermal", "cpu_thermal", "acpitz"}
+
+    for name, entries in readings.items():
+        sensor_name = (name or "").lower()
+        for entry in entries:
+            current = getattr(entry, "current", None)
+            if current is None:
+                continue
+            value = float(current)
+            label = (getattr(entry, "label", "") or "").lower()
+            fallback.append(value)
+            if (
+                sensor_name in cpu_sensor_names
+                or "cpu" in label
+                or "package" in label
+                or label.startswith("tctl")
+            ):
+                preferred.append(value)
+
+    target = preferred or fallback
+    if not target:
+        return None
+    return max(target)
+
+
+def _get_cpu_model_name() -> str:
+    """Return the CPU model string from /proc/cpuinfo (Linux) or platform fallback."""
+    try:
+        with open("/proc/cpuinfo") as fh:
+            for line in fh:
+                if line.lower().startswith("model name"):
+                    return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    try:
+        result = subprocess.run(
+            ["sysctl", "-n", "machdep.cpu.brand_string"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return platform.processor() or ""
+
+
+def collect_system_info() -> dict[str, Any]:
+    """Collect static / slow-changing system information for display in the dashboard."""
+    uname = platform.uname()
+    boot_ts = psutil.boot_time()
+    now_ts = datetime.now(timezone.utc).timestamp()
+    uptime_seconds = max(0, int(now_ts - boot_ts))
+
+    # Disk partitions with usage
+    partitions: list[dict[str, Any]] = []
+    for part in psutil.disk_partitions(all=False):
+        entry: dict[str, Any] = {
+            "device": part.device,
+            "mountpoint": part.mountpoint,
+            "fstype": part.fstype,
+            "total_bytes": 0,
+            "used_bytes": 0,
+            "free_bytes": 0,
+            "percent": 0.0,
+        }
+        try:
+            usage = psutil.disk_usage(part.mountpoint)
+            entry["total_bytes"] = usage.total
+            entry["used_bytes"] = usage.used
+            entry["free_bytes"] = usage.free
+            entry["percent"] = usage.percent
+        except (PermissionError, OSError):
+            pass
+        partitions.append(entry)
+
+    # Network interfaces (names + addresses)
+    net_if_addrs = psutil.net_if_addrs()
+    interfaces: list[dict[str, Any]] = []
+    for iface_name, addrs in net_if_addrs.items():
+        ipv4 = next(
+            (a.address for a in addrs if a.family.name == "AF_INET"),
+            None,
+        )
+        ipv6 = next(
+            (a.address for a in addrs if a.family.name == "AF_INET6"),
+            None,
+        )
+        interfaces.append({"name": iface_name, "ipv4": ipv4, "ipv6": ipv6})
+
+    return {
+        "os_name": uname.system,
+        "os_release": uname.release,
+        "os_version": uname.version,
+        "machine": uname.machine,
+        "processor": uname.processor or _get_cpu_model_name(),
+        "cpu_model": _get_cpu_model_name(),
+        "hostname": uname.node,
+        "cpu_count_logical": psutil.cpu_count(logical=True) or 0,
+        "cpu_count_physical": psutil.cpu_count(logical=False),
+        "memory_total_bytes": int(psutil.virtual_memory().total),
+        "swap_total_bytes": int(psutil.swap_memory().total),
+        "boot_time": datetime.fromtimestamp(boot_ts, tz=timezone.utc).isoformat(),
+        "uptime_seconds": uptime_seconds,
+        "python_version": platform.python_version(),
+        "platform_full": platform.platform(),
+        "partitions": partitions,
+        "interfaces": interfaces,
+    }
+
+
 def collect_raw_metrics(
     *,
     disk_filters: list[str] | None = None,
@@ -212,6 +338,7 @@ def collect_raw_metrics(
     cpu_usage_percent = float(psutil.cpu_percent(interval=max(0.0, cpu_sample_interval)))
     cpu_times_pct = psutil.cpu_times_percent(interval=None)
     cpu_freq = psutil.cpu_freq()
+    cpu_temperature_c = _read_cpu_temperature_c()
     vmem = psutil.virtual_memory()
     swap = psutil.swap_memory()
     load1, load5, load15 = _safe_loadavg()
@@ -246,6 +373,7 @@ def collect_raw_metrics(
         "cpu_load_5": load5,
         "cpu_load_15": load15,
         "cpu_frequency_mhz": _to_float(getattr(cpu_freq, "current", None) if cpu_freq else None),
+        "cpu_temperature_c": cpu_temperature_c,
         "cpu_count_logical": psutil.cpu_count(logical=True) or 0,
         "cpu_count_physical": psutil.cpu_count(logical=False),
         "memory_total_bytes": int(vmem.total),
@@ -261,4 +389,3 @@ def collect_raw_metrics(
         "disks": disk_rows,
         "gpus": gpus,
     }
-

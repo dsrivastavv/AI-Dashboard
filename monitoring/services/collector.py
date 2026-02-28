@@ -222,11 +222,57 @@ def _safe_loadavg() -> tuple[float | None, float | None, float | None]:
         return None, None, None
 
 
+def _read_cpu_temperature_c() -> float | None:
+    """Best-effort CPU package temperature in Celsius.
+
+    psutil may expose multiple sensors; prefer entries that look CPU-related
+    and fall back to the hottest available reading. Returns None if not
+    available on this platform.
+    """
+
+    try:
+        readings = psutil.sensors_temperatures(fahrenheit=False)
+    except (AttributeError, NotImplementedError):
+        return None
+    except Exception:
+        return None
+
+    if not readings:
+        return None
+
+    preferred: list[float] = []
+    fallback: list[float] = []
+    cpu_sensor_names = {"coretemp", "k10temp", "cpu-thermal", "cpu_thermal", "acpitz"}
+
+    for name, entries in readings.items():
+        sensor_name = (name or "").lower()
+        for entry in entries:
+            current = getattr(entry, "current", None)
+            if current is None:
+                continue
+            value = float(current)
+            label = (getattr(entry, "label", "") or "").lower()
+            fallback.append(value)
+            if (
+                sensor_name in cpu_sensor_names
+                or "cpu" in label
+                or "package" in label
+                or label.startswith("tctl")
+            ):
+                preferred.append(value)
+
+    target = preferred or fallback
+    if not target:
+        return None
+    return max(target)
+
+
 def collect_raw_metrics() -> dict[str, Any]:
     # Short interval gives a meaningful CPU reading without slowing the loop much.
     cpu_usage_percent = float(psutil.cpu_percent(interval=0.2))
     cpu_times_pct = psutil.cpu_times_percent(interval=None)
     cpu_freq = psutil.cpu_freq()
+    cpu_temperature_c = _read_cpu_temperature_c()
     vmem = psutil.virtual_memory()
     swap = psutil.swap_memory()
     load1, load5, load15 = _safe_loadavg()
@@ -262,6 +308,7 @@ def collect_raw_metrics() -> dict[str, Any]:
         "cpu_load_5": load5,
         "cpu_load_15": load15,
         "cpu_frequency_mhz": _to_float(getattr(cpu_freq, "current", None) if cpu_freq else None),
+        "cpu_temperature_c": cpu_temperature_c,
         "cpu_count_logical": psutil.cpu_count(logical=True) or 0,
         "cpu_count_physical": psutil.cpu_count(logical=False),
         "memory_total_bytes": int(vmem.total),
@@ -453,6 +500,7 @@ def _normalize_raw_metrics(raw: dict[str, Any]) -> dict[str, Any]:
         "cpu_load_5": _to_float(raw.get("cpu_load_5")),
         "cpu_load_15": _to_float(raw.get("cpu_load_15")),
         "cpu_frequency_mhz": _to_float(raw.get("cpu_frequency_mhz")),
+        "cpu_temperature_c": _to_float(raw.get("cpu_temperature_c")),
         "cpu_count_logical": _to_int(raw.get("cpu_count_logical", 0)),
         "cpu_count_physical": _to_int(raw.get("cpu_count_physical", 0)) or None,
         "memory_total_bytes": _to_int(raw.get("memory_total_bytes", 0)),
@@ -563,6 +611,7 @@ def store_raw_metrics_for_server(
             cpu_load_5=raw["cpu_load_5"],
             cpu_load_15=raw["cpu_load_15"],
             cpu_frequency_mhz=raw["cpu_frequency_mhz"],
+            cpu_temperature_c=raw["cpu_temperature_c"],
             cpu_count_logical=raw["cpu_count_logical"],
             cpu_count_physical=raw["cpu_count_physical"],
             memory_total_bytes=raw["memory_total_bytes"],

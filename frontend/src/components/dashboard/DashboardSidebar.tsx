@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   ArrowLeftRight,
+  Info,
   LogOut,
   Moon,
   RefreshCw,
@@ -109,6 +110,13 @@ export default function DashboardSidebar({
           >
             <Terminal size={13} aria-hidden="true" />
             Terminal
+          </Link>
+          <Link
+            to={{ pathname: '/system', search }}
+            className={`sidebar-tab${pathname === '/system' ? ' is-active' : ''}`}
+          >
+            <Info size={13} aria-hidden="true" />
+            System Info
           </Link>
         </nav>
       </div>

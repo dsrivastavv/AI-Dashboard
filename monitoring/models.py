@@ -100,6 +100,7 @@ class MetricSnapshot(models.Model):
     cpu_load_5 = models.FloatField(null=True, blank=True)
     cpu_load_15 = models.FloatField(null=True, blank=True)
     cpu_frequency_mhz = models.FloatField(null=True, blank=True)
+    cpu_temperature_c = models.FloatField(null=True, blank=True)
     cpu_count_logical = models.IntegerField(default=0)
     cpu_count_physical = models.IntegerField(null=True, blank=True)
 

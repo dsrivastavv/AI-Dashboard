@@ -51,6 +51,7 @@ def _serialize_server(server: MonitoredServer) -> dict[str, Any]:
             if getattr(server, "latest_snapshot_at", None)
             else None
         ),
+        "agent_info": server.agent_info or {},
     }
 
 
@@ -122,6 +123,7 @@ def _serialize_snapshot(snapshot: MetricSnapshot) -> dict[str, Any]:
             "load_5": snapshot.cpu_load_5,
             "load_15": snapshot.cpu_load_15,
             "frequency_mhz": snapshot.cpu_frequency_mhz,
+            "temperature_c": snapshot.cpu_temperature_c,
             "count_logical": snapshot.cpu_count_logical,
             "count_physical": snapshot.cpu_count_physical,
         },

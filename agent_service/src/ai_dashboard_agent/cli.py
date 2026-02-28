@@ -12,7 +12,7 @@ import requests
 
 from . import __version__
 from .client import post_sample
-from .collector import collect_raw_metrics
+from .collector import collect_raw_metrics, collect_system_info
 
 
 def _csv_list(value: str) -> list[str]:
@@ -67,6 +67,7 @@ def _validate_args(args: argparse.Namespace) -> None:
 
 
 def _agent_metadata(args: argparse.Namespace, disk_filters: list[str]) -> dict[str, Any]:
+    system_info = collect_system_info()
     return {
         "version": __version__,
         "hostname": args.hostname,
@@ -75,6 +76,7 @@ def _agent_metadata(args: argparse.Namespace, disk_filters: list[str]) -> dict[s
         "pid": os.getpid(),
         "labels": _parse_labels(args.label),
         "disk_filters": disk_filters,
+        "system_info": system_info,
     }
 
 
