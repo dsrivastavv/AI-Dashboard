@@ -5,6 +5,7 @@ import math
 from urllib.parse import urlencode
 from datetime import timedelta
 from typing import Any
+import logging
 
 from django.conf import settings
 from django.contrib.auth import logout
@@ -20,6 +21,8 @@ from monitoring.auth import is_google_email_allowlisted
 from monitoring.models import MetricSnapshot, MonitoredServer, Notification
 from monitoring.services.collector import ingest_sample_for_server
 from monitoring.version import BACKEND_VERSION, MIN_AGENT_VERSION
+
+logger = logging.getLogger(__name__)
 
 
 def _label_to_title(label: str) -> str:
@@ -201,6 +204,20 @@ def _deny_if_not_allowlisted(request):
     )
 
 
+def _require_authenticated_allowlisted(request) -> JsonResponse | None:
+    """Return an auth/allowlist error response or ``None`` when allowed."""
+    if not request.user.is_authenticated:
+        logger.debug("Auth required for path %s", request.path)
+        return _api_auth_required_response(request)
+
+    denied = _deny_if_not_allowlisted(request)
+    if denied is not None:
+        logger.info("Access denied for user %s on path %s", getattr(request.user, "email", None), request.path)
+        return denied
+
+    return None
+
+
 def _selected_server_and_list(request) -> tuple[MonitoredServer | None, list[MonitoredServer]]:
     servers = list(_server_queryset())
     selected = _pick_server(servers, request.GET.get("server"))
@@ -244,13 +261,27 @@ def _api_auth_required_response(request) -> JsonResponse:
     )
 
 
+def _load_json_dict(request) -> tuple[dict[str, Any] | None, JsonResponse | None]:
+    """Parse a JSON object request body and return (data, error_response)."""
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        logger.warning("Invalid JSON payload on %s", request.path)
+        return None, JsonResponse({"ok": False, "error": "Invalid JSON payload."}, status=400)
+
+    if not isinstance(body, dict):
+        logger.warning("JSON payload is not an object on %s", request.path)
+        return None, JsonResponse({"ok": False, "error": "Payload must be a JSON object."}, status=400)
+
+    return body, None
+
+
 @require_GET
 def api_servers(request):
-    if not request.user.is_authenticated:
-        return _api_auth_required_response(request)
-    denied = _deny_if_not_allowlisted(request)
-    if denied is not None:
-        return denied
+    access_error = _require_authenticated_allowlisted(request)
+    if access_error is not None:
+        return access_error
+    logger.debug("Listing servers for user=%s", getattr(request.user, "email", None))
     servers = list(_server_queryset())
     return JsonResponse(
         {
@@ -262,14 +293,13 @@ def api_servers(request):
 
 @require_GET
 def api_metrics_latest(request):
-    if not request.user.is_authenticated:
-        return _api_auth_required_response(request)
-    denied = _deny_if_not_allowlisted(request)
-    if denied is not None:
-        return denied
+    access_error = _require_authenticated_allowlisted(request)
+    if access_error is not None:
+        return access_error
 
     selected_server, servers = _selected_server_and_list(request)
     if selected_server is None:
+        logger.info("metrics_latest requested but no servers are registered")
         return JsonResponse(
             {
                 "ok": False,
@@ -286,6 +316,7 @@ def api_metrics_latest(request):
         .first()
     )
     if snapshot is None:
+        logger.info("metrics_latest: no snapshots yet for server=%s", selected_server.slug)
         return JsonResponse(
             {
                 "ok": False,
@@ -310,12 +341,11 @@ def api_metrics_latest(request):
 
 @require_GET
 def api_notifications(request):
-    if not request.user.is_authenticated:
-        return _api_auth_required_response(request)
-    denied = _deny_if_not_allowlisted(request)
-    if denied is not None:
-        return denied
+    access_error = _require_authenticated_allowlisted(request)
+    if access_error is not None:
+        return access_error
 
+    logger.debug("Fetching notifications for user=%s", getattr(request.user, "email", None))
     qs = Notification.objects.select_related("server").order_by("-created_at")[:50]
     payload = [
         {
@@ -336,16 +366,14 @@ def api_notifications(request):
 @csrf_exempt
 @require_POST
 def api_notifications_mark_read(request):
-    if not request.user.is_authenticated:
-        return _api_auth_required_response(request)
-    denied = _deny_if_not_allowlisted(request)
-    if denied is not None:
-        return denied
+    access_error = _require_authenticated_allowlisted(request)
+    if access_error is not None:
+        return access_error
 
-    try:
-        body = json.loads(request.body.decode("utf-8") or "{}")
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return JsonResponse({"ok": False, "error": "Invalid JSON payload."}, status=400)
+    body, error_response = _load_json_dict(request)
+    if error_response is not None:
+        return error_response
+
     ids = body.get("ids") if isinstance(body, dict) else None
     if not isinstance(ids, list):
         return JsonResponse({"ok": False, "error": "ids must be a list."}, status=400)
@@ -355,19 +383,19 @@ def api_notifications_mark_read(request):
 
     with transaction.atomic():
         updated = Notification.objects.filter(id__in=cleaned_ids).update(is_read=True)
+    logger.info("Marked notifications read: count=%s user=%s", updated, getattr(request.user, "email", None))
     return JsonResponse({"ok": True, "updated": updated})
 
 
 @require_GET
 def api_metrics_history(request):
-    if not request.user.is_authenticated:
-        return _api_auth_required_response(request)
-    denied = _deny_if_not_allowlisted(request)
-    if denied is not None:
-        return denied
+    access_error = _require_authenticated_allowlisted(request)
+    if access_error is not None:
+        return access_error
 
     selected_server, servers = _selected_server_and_list(request)
     if selected_server is None:
+        logger.info("metrics_history requested but no servers registered")
         return JsonResponse(
             {
                 "ok": True,
@@ -490,25 +518,25 @@ def _request_ip(request) -> str | None:
 def api_ingest_server_metrics(request, server_slug: str):
     server = get_object_or_404(MonitoredServer, slug=server_slug)
     if not server.is_active:
+        logger.info("Ingest denied: server %s disabled", server_slug)
         return JsonResponse({"ok": False, "error": "Server is disabled."}, status=403)
 
     token = _extract_ingest_token(request)
     if not server.check_api_token(token):
+        logger.warning("Invalid ingest token for server=%s from ip=%s", server_slug, _request_ip(request))
         return JsonResponse({"ok": False, "error": "Invalid ingest token."}, status=401)
 
-    try:
-        payload = json.loads(request.body.decode("utf-8") or "{}")
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return JsonResponse({"ok": False, "error": "Invalid JSON payload."}, status=400)
-
-    if not isinstance(payload, dict):
-        return JsonResponse({"ok": False, "error": "Payload must be a JSON object."}, status=400)
+    payload, error_response = _load_json_dict(request)
+    if error_response is not None:
+        return error_response
 
     try:
         snapshot = ingest_sample_for_server(server, payload, source_ip=_request_ip(request))
     except Exception as exc:  # pragma: no cover - defensive API path
+        logger.exception("Ingest failed for server=%s", server_slug)
         return JsonResponse({"ok": False, "error": f"Ingest failed: {exc}"}, status=400)
 
+    logger.debug("Ingest OK server=%s snap_id=%s bottleneck=%s", server_slug, snapshot.id, snapshot.bottleneck)
     return JsonResponse(
         {
             "ok": True,
@@ -523,3 +551,122 @@ def api_ingest_server_metrics(request, server_slug: str):
             },
         }
     )
+
+
+# ── Credential auth views ─────────────────────────────────────────────────────
+
+@csrf_exempt
+@require_POST
+def api_auth_login(request):
+    """Authenticate with username + password and establish a session."""
+    from django.contrib.auth import authenticate, login as auth_login
+
+    body, error_response = _load_json_dict(request)
+    if error_response is not None:
+        return error_response
+
+    username = (body.get("username") or "").strip()
+    password = body.get("password") or ""
+
+    if not username or not password:
+        return JsonResponse({"ok": False, "error": "Username and password are required."}, status=400)
+
+    user = authenticate(request, username=username, password=password)
+    if user is None:
+        logger.info("Credential login failed for username=%s", username)
+        return JsonResponse({"ok": False, "error": "Invalid username or password."}, status=401)
+
+    if not user.is_active:
+        logger.info("Credential login for disabled user=%s", username)
+        return JsonResponse({"ok": False, "error": "This account is disabled."}, status=403)
+
+    auth_login(request, user)
+    logger.info("Credential login success for user=%s", username)
+    return JsonResponse({
+        "ok": True,
+        "user": {
+            "username": user.username,
+            "email": user.email,
+        },
+    })
+
+
+@csrf_exempt
+@require_POST
+def api_auth_register(request):
+    """Create a new user account with username, email, and password."""
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError
+    from django.core.validators import validate_email
+
+    User = get_user_model()
+
+    body, error_response = _load_json_dict(request)
+    if error_response is not None:
+        return error_response
+
+    username = (body.get("username") or "").strip()
+    email = (body.get("email") or "").strip().lower()
+    password = body.get("password") or ""
+
+    if not username or not email or not password:
+        return JsonResponse({"ok": False, "error": "Username, email and password are required."}, status=400)
+
+    # Validate email format
+    try:
+        validate_email(email)
+    except ValidationError:
+        return JsonResponse({"ok": False, "error": "Enter a valid email address."}, status=400)
+
+    if User.objects.filter(username=username).exists():
+        return JsonResponse({"ok": False, "error": "That username is already taken."}, status=409)
+
+    if User.objects.filter(email=email).exists():
+        return JsonResponse({"ok": False, "error": "That email is already registered."}, status=409)
+
+    try:
+        validate_password(password)
+    except ValidationError as exc:
+        return JsonResponse({"ok": False, "error": " ".join(exc.messages)}, status=400)
+
+    user = User.objects.create_user(username=username, email=email, password=password)  # type: ignore[arg-type]
+    logger.info("User registered username=%s email=%s", username, email)
+    return JsonResponse({
+        "ok": True,
+        "user": {
+            "username": user.username,
+            "email": user.email,
+        },
+    }, status=201)
+
+
+@csrf_exempt
+@require_POST
+def api_auth_forgot_password(request):
+    """Send a password-reset email (uses Django's built-in PasswordResetForm)."""
+    from django.contrib.auth.forms import PasswordResetForm
+
+    body, error_response = _load_json_dict(request)
+    if error_response is not None:
+        return error_response
+
+    email = (body.get("email") or "").strip().lower()
+    if not email:
+        return JsonResponse({"ok": False, "error": "Email is required."}, status=400)
+
+    form = PasswordResetForm(data={"email": email})
+    if form.is_valid():
+        form.save(
+            request=request,
+            use_https=request.is_secure(),
+            email_template_name="registration/password_reset_email.html",
+            subject_template_name="registration/password_reset_subject.txt",
+            from_email=None,
+        )
+
+    # Always succeed to prevent email enumeration
+    return JsonResponse({
+        "ok": True,
+        "message": "If that email address is registered, a reset link has been sent.",
+    })

@@ -1,4 +1,5 @@
 import type { ApiErrorResponse } from '../types/api';
+import { logDebug, logError, logWarn } from './logger';
 
 export class ApiHttpError<T = unknown> extends Error {
   readonly status: number;
@@ -64,6 +65,7 @@ export async function requestJson<T>(input: RequestInfo | URL, init: RequestInit
       headers,
     });
   } catch (error) {
+    logError('Network error', { input: input.toString?.() ?? input, error });
     if (error instanceof Error && error.name !== 'AbortError') {
       error.name = 'NetworkError';
     }
@@ -75,9 +77,11 @@ export async function requestJson<T>(input: RequestInfo | URL, init: RequestInit
     const message = isApiErrorPayload(body)
       ? body.error
       : `Request failed with status ${response.status}`;
+    logWarn('HTTP error response', { status: response.status, message, input: input.toString?.() ?? input, body });
     throw new ApiHttpError(message, response.status, body);
   }
 
+  logDebug('HTTP success', { input: input.toString?.() ?? input, status: response.status });
   return body as T;
 }
 

@@ -56,3 +56,30 @@ export function markNotificationsRead(ids: number[], signal?: AbortSignal) {
     signal,
   });
 }
+
+export function authLogin(username: string, password: string, signal?: AbortSignal) {
+  return requestJson<{ ok: boolean; user: { username: string; email: string } }>('/api/auth/login/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+    signal,
+  });
+}
+
+export function authRegister(username: string, email: string, password: string, signal?: AbortSignal) {
+  return requestJson<{ ok: boolean; user: { username: string; email: string } }>('/api/auth/register/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, email, password }),
+    signal,
+  });
+}
+
+export function authForgotPassword(email: string, signal?: AbortSignal) {
+  return requestJson<{ ok: boolean; message: string }>('/api/auth/forgot-password/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+    signal,
+  });
+}

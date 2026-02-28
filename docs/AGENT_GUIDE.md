@@ -92,6 +92,10 @@ If omitted, the agent auto-detects common physical disks (e.g., `nvme*`, `sd*`, 
   - Suppress routine stdout logging
 - `--insecure`
   - Disable TLS certificate verification (use only for testing)
+- `--log-level`
+  - One of `DEBUG, INFO, WARNING, ERROR, CRITICAL`
+  - Default: `INFO` (or `WARNING` when `--quiet`)
+- Env alternative: `AI_DASHBOARD_LOG_LEVEL=DEBUG` (useful for diagnosing connectivity issues)
 
 ## Metadata Labels
 
@@ -230,4 +234,3 @@ Fix:
 
 - Check `--disks` names match actual block device names (`lsblk`)
 - If auto-detecting, ensure devices look like physical disks (`nvme*`, `sd*`, `vd*`)
-

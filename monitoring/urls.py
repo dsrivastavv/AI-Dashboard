@@ -16,4 +16,8 @@ urlpatterns = [
         views.api_ingest_server_metrics,
         name="api_ingest_server_metrics",
     ),
+    # Credential-based auth
+    path("api/auth/login/", views.api_auth_login, name="api_auth_login"),
+    path("api/auth/register/", views.api_auth_register, name="api_auth_register"),
+    path("api/auth/forgot-password/", views.api_auth_forgot_password, name="api_auth_forgot_password"),
 ]

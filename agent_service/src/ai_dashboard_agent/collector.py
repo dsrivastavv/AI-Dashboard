@@ -7,11 +7,13 @@ import subprocess
 import warnings
 from datetime import datetime, timezone
 from typing import Any
+import logging
 
 import psutil
 
 
 PHYSICAL_DISK_RE = re.compile(r"^(nvme\d+n\d+|sd[a-z]+|vd[a-z]+|xvd[a-z]+|md\d+)$")
+logger = logging.getLogger(__name__)
 
 
 def _to_float(value: Any) -> float | None:
@@ -55,11 +57,13 @@ def _collect_gpu_metrics_nvml() -> list[dict[str, Any]] | None:
         try:
             import pynvml  # type: ignore
         except Exception:
+            logger.debug("pynvml not available; skipping NVML path")
             return None
 
     try:
         pynvml.nvmlInit()
     except Exception:
+        logger.debug("pynvml initialization failed")
         return None
 
     gpus: list[dict[str, Any]] = []
@@ -164,9 +168,11 @@ def _collect_gpu_metrics_nvidia_smi() -> list[dict[str, Any]]:
             cmd, check=False, capture_output=True, text=True, timeout=2
         )
     except (OSError, subprocess.SubprocessError):
+        logger.debug("nvidia-smi not available")
         return []
 
     if result.returncode != 0 or not result.stdout.strip():
+        logger.debug("nvidia-smi returned no data (code=%s)", result.returncode)
         return []
 
     gpus: list[dict[str, Any]] = []
@@ -248,6 +254,7 @@ def _collect_fan_speeds() -> list[dict[str, Any]]:
             timeout=3,
         )
     except (OSError, subprocess.SubprocessError, ValueError):
+        logger.debug("ipmitool not available for fan speeds")
         return []
 
     if result.returncode != 0 or not result.stdout:

@@ -7,12 +7,15 @@ import socket
 import sys
 import time
 from typing import Any
+import logging
 
 import requests
 
 from . import __version__
 from .client import post_sample
 from .collector import collect_raw_metrics, collect_system_info
+
+LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 
 
 def _csv_list(value: str) -> list[str]:
@@ -48,6 +51,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--insecure", action="store_true", help="Disable TLS verification")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument(
+        "--log-level",
+        default=os.environ.get("AI_DASHBOARD_LOG_LEVEL", "INFO"),
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level (default INFO; DEBUG for verbose agent output)",
+    )
     parser.add_argument(
         "--label",
         action="append",
@@ -86,6 +95,10 @@ def _print(msg: str, quiet: bool = False) -> None:
 
 
 def run(args: argparse.Namespace) -> int:
+    level_name = "WARNING" if args.quiet else args.log_level.upper()
+    logging.basicConfig(level=level_name, format=LOG_FORMAT)
+    logger = logging.getLogger("ai_dashboard_agent")
+
     _validate_args(args)
     verify = not args.insecure
     interval = max(0.5, float(args.interval))
@@ -98,6 +111,7 @@ def run(args: argparse.Namespace) -> int:
     )
     if disk_filters:
         _print(f"Tracking disks: {', '.join(disk_filters)}", quiet=args.quiet)
+    logger.info("Agent starting interval=%.2fs verify_tls=%s quiet=%s", interval, verify, args.quiet)
 
     session = requests.Session()
     while True:
@@ -132,6 +146,7 @@ def run(args: argparse.Namespace) -> int:
             _print("Agent stopped.", quiet=args.quiet)
             return 0
         except Exception as exc:
+            logger.exception("Send failed")
             _print(f"Send failed: {exc}", quiet=args.quiet)
             if args.once:
                 return 1
@@ -157,4 +172,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

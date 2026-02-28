@@ -20,6 +20,11 @@ Multi-server AI training system health dashboard with:
 
 ## Quick Start (Django Backend + React Frontend)
 
+### Choose a mode
+
+- Development (default): `DJANGO_ENV=debug` (enables Django debug, relaxed cookies)
+- Production: `DJANGO_ENV=production` (requires `DJANGO_SECRET_KEY`, enables secure cookies/redirects/HSTS)
+
 ## 1. Start the Django Backend (Central Host)
 
 ```bash
@@ -27,10 +32,14 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
+export DJANGO_ENV=debug  # or production
+export DJANGO_SECRET_KEY='replace-me-in-production'
 export GOOGLE_CLIENT_ID='YOUR_GOOGLE_WEB_APP_CLIENT_ID'
 export GOOGLE_CLIENT_SECRET='YOUR_GOOGLE_WEB_APP_CLIENT_SECRET'
 export GOOGLE_ALLOWED_EMAILS='you@gmail.com'
 export FRONTEND_APP_URL='http://127.0.0.1:3000'
+export VITE_LOG_LEVEL='debug'  # frontend console logs (debug/info/warn/error)
+export AI_DASHBOARD_LOG_LEVEL='info'  # agent logs (set DEBUG to troubleshoot)
 
 python3 manage.py migrate
 python3 manage.py runserver 0.0.0.0:8000

@@ -3,12 +3,17 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
+from typing import TYPE_CHECKING
 
 from django.db import models
 from django.utils.text import slugify
 
+if TYPE_CHECKING:
+    from django.db.models.manager import RelatedManager
+
 
 class MonitoredServer(models.Model):
+    id: int
     slug = models.SlugField(max_length=64, unique=True)
     name = models.CharField(max_length=128)
     hostname = models.CharField(max_length=255, blank=True)
@@ -82,6 +87,11 @@ class MonitoredServer(models.Model):
 
 
 class MetricSnapshot(models.Model):
+    id: int
+    server_id: int | None
+    gpus: RelatedManager[GpuMetric]
+    fans: RelatedManager[FanMetric]
+    disks: RelatedManager[DiskMetric]
     server = models.ForeignKey(
         MonitoredServer,
         null=True,
@@ -215,6 +225,8 @@ class DiskMetric(models.Model):
 
 
 class Notification(models.Model):
+    id: int
+    server_id: int | None
     LEVEL_CHOICES = [
         ("info", "Info"),
         ("warning", "Warning"),

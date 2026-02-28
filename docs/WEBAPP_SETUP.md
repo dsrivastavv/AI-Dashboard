@@ -36,6 +36,8 @@ pip install -r requirements.txt
 At minimum:
 
 ```bash
+export DJANGO_ENV=debug  # use production in real deployments
+export DJANGO_SECRET_KEY='set-a-strong-secret-when-production'
 export GOOGLE_CLIENT_ID='...apps.googleusercontent.com'
 export GOOGLE_CLIENT_SECRET='GOCSPX-...'
 export GOOGLE_ALLOWED_EMAILS='you@gmail.com,teammate@ucsd.edu'
@@ -46,9 +48,14 @@ Common optional settings:
 ```bash
 export GOOGLE_ALLOWED_DOMAINS='yourcompany.com'
 export DJANGO_ALLOWED_HOSTS='127.0.0.1,localhost,dashboard.internal'
+export DJANGO_CSRF_TRUSTED_ORIGINS='https://dashboard.example.com,https://dashboard.internal'
+export DJANGO_SECURE_BEHIND_PROXY='1'   # set if SSL is terminated by a proxy
+export DJANGO_SECURE_SSL_REDIRECT='1'    # forces HTTPS (default when DJANGO_ENV=production)
 export MONITORING_RETENTION_DAYS='14'
 export MONITORING_DEFAULT_HISTORY_MINUTES='60'
 export MONITORING_MAX_HISTORY_MINUTES='1440'
+export VITE_LOG_LEVEL='info'             # frontend console log level (debug/info/warn/error)
+export AI_DASHBOARD_LOG_LEVEL='info'     # agent log level (DEBUG recommended when diagnosing)
 ```
 
 ## 3. Google OAuth Setup (Required for Dashboard Login)
@@ -189,6 +196,11 @@ python3 manage.py collect_metrics --interval 2
 ```
 
 ## 10. Production Deployment Notes
+
+- Set `DJANGO_ENV=production` and a non-default `DJANGO_SECRET_KEY`
+- Configure `DJANGO_ALLOWED_HOSTS` and (if applicable) `DJANGO_CSRF_TRUSTED_ORIGINS`
+- HTTPS: enable `DJANGO_SECURE_SSL_REDIRECT=1` (default in production) and set `DJANGO_SECURE_BEHIND_PROXY=1` when behind a TLS-terminating proxy
+- Logging: Django logs to stdout (DEBUG when `DJANGO_DEBUG=1`, else INFO); frontend logging level uses `VITE_LOG_LEVEL`; agent logging uses `AI_DASHBOARD_LOG_LEVEL` or `--log-level`.
 
 ## Reverse Proxy
 

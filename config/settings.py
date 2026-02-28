@@ -6,15 +6,26 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ── Environment / Modes ─────────────────────────────────────────────────────
+ENV = os.environ.get("DJANGO_ENV", "debug").strip().lower()
+IS_PRODUCTION = ENV == "production"
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-r4vk3g$@-dr(y&v=&iv57!1eox_l6_6!&1q=7(sxku27*w&fp0'
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-r4vk3g$@-dr(y&v=&iv57!1eox_l6_6!&1q=7(sxku27*w&fp0")
+if IS_PRODUCTION and SECRET_KEY.startswith("django-insecure"):
+    raise ValueError("DJANGO_SECRET_KEY must be set when DJANGO_ENV=production")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _env_flag("DJANGO_DEBUG", default=not IS_PRODUCTION)
 
 _allowed_hosts_raw = os.environ.get("DJANGO_ALLOWED_HOSTS")
 if _allowed_hosts_raw:
@@ -120,6 +131,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = Path(os.environ.get("DJANGO_STATIC_ROOT", BASE_DIR / "staticfiles"))
 
 
 def _csv_list(value: str) -> list[str]:
@@ -177,3 +189,36 @@ MONITORING_DISKS = _csv_list(os.environ.get('MONITORING_DISKS', ''))
 MONITORING_DEFAULT_HISTORY_MINUTES = int(os.environ.get('MONITORING_DEFAULT_HISTORY_MINUTES', '60'))
 MONITORING_MAX_HISTORY_MINUTES = int(os.environ.get('MONITORING_MAX_HISTORY_MINUTES', '1440'))
 MONITORING_RETENTION_DAYS = int(os.environ.get('MONITORING_RETENTION_DAYS', '14'))
+
+# ── Security hardening (production defaults) ───────────────────────────────
+SESSION_COOKIE_SECURE = _env_flag("DJANGO_SESSION_COOKIE_SECURE", IS_PRODUCTION)
+CSRF_COOKIE_SECURE = _env_flag("DJANGO_CSRF_COOKIE_SECURE", IS_PRODUCTION)
+SECURE_SSL_REDIRECT = _env_flag("DJANGO_SECURE_SSL_REDIRECT", IS_PRODUCTION)
+SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "31536000" if IS_PRODUCTION else "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_flag("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", IS_PRODUCTION)
+SECURE_HSTS_PRELOAD = _env_flag("DJANGO_SECURE_HSTS_PRELOAD", IS_PRODUCTION)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https') if _env_flag("DJANGO_SECURE_BEHIND_PROXY") else None
+
+CSRF_TRUSTED_ORIGINS = _csv_list(os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", ""))
+
+# ── Logging ────────────────────────────────────────────────────────────────
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG' if DEBUG else 'INFO',
+    },
+    'loggers': {
+        'django.security': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}
