@@ -18,6 +18,7 @@ from django.views.decorators.http import require_GET, require_POST
 from monitoring.auth import is_google_email_allowlisted
 from monitoring.models import MetricSnapshot, MonitoredServer
 from monitoring.services.collector import ingest_sample_for_server
+from monitoring.version import BACKEND_VERSION, MIN_AGENT_VERSION
 
 
 def _label_to_title(label: str) -> str:
@@ -211,6 +212,8 @@ def api_root(request):
         {
             "ok": True,
             "service": "ai-dashboard-backend",
+            "backend_version": BACKEND_VERSION,
+            "min_agent_version": MIN_AGENT_VERSION,
             "frontend_url": getattr(settings, "FRONTEND_APP_URL", ""),
             "routes": {
                 "servers": "/api/servers/",
@@ -297,6 +300,8 @@ def api_metrics_latest(request):
             "servers": [_serialize_server(server) for server in servers],
             "selected_server": _serialize_server(selected_server),
             "snapshot": _serialize_snapshot(snapshot),
+            "backend_version": BACKEND_VERSION,
+            "min_agent_version": MIN_AGENT_VERSION,
         }
     )
 
@@ -402,6 +407,8 @@ def api_metrics_history(request):
             "servers": [_serialize_server(server) for server in servers],
             "selected_server": _serialize_server(selected_server),
             "points": points,
+            "backend_version": BACKEND_VERSION,
+            "min_agent_version": MIN_AGENT_VERSION,
         }
     )
 

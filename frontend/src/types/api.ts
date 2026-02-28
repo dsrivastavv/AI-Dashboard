@@ -174,6 +174,8 @@ export interface LatestSnapshotResponse {
   servers: ServerSummary[];
   selected_server: ServerSummary;
   snapshot: MetricSnapshot;
+  backend_version?: string;
+  min_agent_version?: string;
 }
 
 export interface LatestSnapshotNotFoundResponse extends ApiErrorResponse {
@@ -228,4 +230,6 @@ export interface HistoryMetricsResponse {
   servers: ServerSummary[];
   selected_server: ServerSummary | null;
   points: HistoryPoint[];
+  backend_version?: string;
+  min_agent_version?: string;
 }

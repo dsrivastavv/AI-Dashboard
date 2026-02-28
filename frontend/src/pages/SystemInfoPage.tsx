@@ -13,6 +13,7 @@ import EmptyState from '../components/common/EmptyState';
 import type { AppLayoutContext } from '../components/layout/AppLayout';
 import type { AgentSystemInfo, SystemInfoPartition, SystemInfoNetworkInterface } from '../types/api';
 import { formatBytes, formatDateTime, formatPercent } from '../lib/format';
+import { FRONTEND_VERSION } from '../version';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -173,6 +174,10 @@ export default function SystemInfoPage() {
   const { data } = useOutletContext<AppLayoutContext>();
   const server = data.selectedServer;
   const sysInfo: AgentSystemInfo | undefined = server?.agent_info?.system_info as AgentSystemInfo | undefined;
+  const backendVersion =
+    data.latest.data?.backend_version ?? data.history.data?.backend_version ?? 'unknown';
+  const minAgentVersion =
+    data.latest.data?.min_agent_version ?? data.history.data?.min_agent_version ?? undefined;
 
   if (!server) {
     return (
@@ -256,6 +261,11 @@ export default function SystemInfoPage() {
               <InfoRow label="Boot time" value={formatDateTime(sysInfo.boot_time)} />
               <InfoRow label="Last seen" value={formatDateTime(server.last_seen_at)} />
               <InfoRow label="Agent version" value={agentVersion} mono />
+              <InfoRow label="Backend version" value={backendVersion} mono />
+              {minAgentVersion ? (
+                <InfoRow label="Min supported agent" value={minAgentVersion} mono />
+              ) : null}
+              <InfoRow label="Frontend version" value={FRONTEND_VERSION} mono />
               <InfoRow label="Python (agent)" value={sysInfo.python_version} mono />
             </div>
           </SysCard>
