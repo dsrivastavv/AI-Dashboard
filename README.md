@@ -25,12 +25,31 @@ Multi-server AI training system health dashboard with:
 - Development (default): `DJANGO_ENV=debug` (enables Django debug, relaxed cookies)
 - Production: `DJANGO_ENV=production` (requires `DJANGO_SECRET_KEY`, enables secure cookies/redirects/HSTS)
 
+### Fast debug start (end-to-end)
+
+```bash
+# one-time: conda env
+conda env create -f environment.yml
+conda activate ai-dashboard
+
+# load local creds (created by us):
+cp .env.example .env   # if you need a template
+source .env
+
+# run full stack (Django + Vite dev server)
+./deploy-debug.sh
+
+# open
+open http://127.0.0.1:3000/dashboard
+```
+
+`deploy-debug.sh` will run migrations (unless `SKIP_MIGRATIONS=1`), start `manage.py runserver` on `BACKEND_PORT` (default 8000) and Vite on port 3000. Stop with Ctrl+C.
+
 ## 1. Start the Django Backend (Central Host)
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+conda env create -f environment.yml
+conda activate ai-dashboard
 
 export DJANGO_ENV=debug  # or production
 export DJANGO_SECRET_KEY='replace-me-in-production'
@@ -41,8 +60,8 @@ export FRONTEND_APP_URL='http://127.0.0.1:3000'
 export VITE_LOG_LEVEL='debug'  # frontend console logs (debug/info/warn/error)
 export AI_DASHBOARD_LOG_LEVEL='info'  # agent logs (set DEBUG to troubleshoot)
 
-python3 manage.py migrate
-python3 manage.py runserver 0.0.0.0:8000
+python manage.py migrate
+python manage.py runserver 0.0.0.0:8000
 ```
 
 ## 2. Start the React Frontend (Vite + Bootstrap)
@@ -74,8 +93,8 @@ Save the printed `INGEST_TOKEN`.
 
 ```bash
 cd agent_service
-python3 -m venv .venv
-source .venv/bin/activate
+conda env create -f environment.yml
+conda activate ai-dashboard-agent
 pip install .
 
 ai-dashboard-agent \
@@ -104,6 +123,10 @@ This stores metrics under a `local` monitored server entry.
 ## Common Commands
 
 ```bash
+# Create / update conda environments
+conda env create -f environment.yml
+conda env update -f environment.yml --prune
+
 # Register a server
 python3 manage.py register_server gpu-box-01 --name "GPU Box 01"
 

@@ -4,6 +4,9 @@ __pycache__/
 *.sqlite3-*
 .venv/
 venv/
+# conda environments (if created locally inside the repo)
+envs/
+.conda/
 .env
 staticfiles/
 .pytest_cache/
@@ -11,13 +14,15 @@ staticfiles/
 *.egg-info/
 cred.txt
 
+# Node / frontend artifacts
 frontend/node_modules
-
-# testing
-frontend/coverage
-
-# production
+frontend/.vite
+frontend/.cache
 frontend/dist
+frontend/coverage
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
 
 # misc
 .DS_Store

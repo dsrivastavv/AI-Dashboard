@@ -7,9 +7,10 @@
 #   ./deploy.sh --no-npm  # skip frontend build (backend only)
 #
 # Expects:
-#   - Python .venv at .venv/ (or VIRTUAL_ENV set)
-#   - Node/npm available for frontend build
-#   - Environment variables loaded (e.g. via .env or system env)
+#   - Conda installed and `conda activate ai-dashboard` already active,
+#     OR the CONDA_DEFAULT_ENV variable is set to 'ai-dashboard'.
+#   - Node/npm available for frontend build.
+#   - Environment variables loaded (e.g. via .env or system env).
 # ──────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -23,16 +24,18 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "==> AI Dashboard – Production Build"
 echo "    Root: $ROOT_DIR"
 
-# ── 1. Activate Python virtualenv ────────────────────────────────────────────
-if [[ -z "${VIRTUAL_ENV:-}" ]]; then
-  source "$ROOT_DIR/.venv/bin/activate"
+# ── 1. Ensure we are inside the correct conda environment ────────────────────
+if [[ "${CONDA_DEFAULT_ENV:-}" != "ai-dashboard" ]]; then
+  echo "    Activating conda environment 'ai-dashboard'..."
+  # shellcheck disable=SC1091
+  source "$(conda info --base)/etc/profile.d/conda.sh"
+  conda activate ai-dashboard
 fi
-echo "    Python: $(python --version)"
+echo "    Python: $(python --version)  (env: ${CONDA_DEFAULT_ENV})"
 
 # ── 2. Install/upgrade Python dependencies ───────────────────────────────────
 echo "==> Installing Python dependencies..."
-pip install -q --upgrade pip
-pip install -q -r "$ROOT_DIR/requirements.txt"
+conda env update --file "$ROOT_DIR/environment.yml" --prune -q
 
 # ── 3. Build React frontend ───────────────────────────────────────────────────
 if [[ "$SKIP_NPM" == "false" ]]; then

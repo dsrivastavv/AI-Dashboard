@@ -1,0 +1,12 @@
+name: ai-dashboard-agent
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.13
+  - pip
+  - pip:
+      - psutil>=7.2
+      - requests>=2.31
+      - nvidia-ml-py>=12.0
+      - ai-dashboard-agent  # install local package with: pip install -e .
