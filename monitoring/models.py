@@ -214,6 +214,38 @@ class DiskMetric(models.Model):
         return f"{self.device} @ {self.snapshot.collected_at.isoformat()}"
 
 
+class Notification(models.Model):
+    LEVEL_CHOICES = [
+        ("info", "Info"),
+        ("warning", "Warning"),
+        ("critical", "Critical"),
+    ]
+
+    server = models.ForeignKey(
+        MonitoredServer,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+    )
+    level = models.CharField(max_length=16, choices=LEVEL_CHOICES, default="info")
+    code = models.CharField(max_length=64, blank=True, db_index=True)
+    title = models.CharField(max_length=128)
+    message = models.CharField(max_length=512, blank=True)
+    is_read = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["-created_at", "is_read"]),
+            models.Index(fields=["code", "-created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.title} ({self.level})"
+
+
 class FanMetric(models.Model):
     snapshot = models.ForeignKey(MetricSnapshot, on_delete=models.CASCADE, related_name="fans")
     label = models.CharField(max_length=64)

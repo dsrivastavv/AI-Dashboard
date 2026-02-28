@@ -2,6 +2,8 @@ import type {
   HistoryMetricsResponse,
   LatestSnapshotResponse,
   ServersListResponse,
+  NotificationsResponse,
+  MarkNotificationsReadResponse,
 } from '../types/api';
 import { requestJson } from './http';
 
@@ -41,4 +43,16 @@ export function getMetricsHistory(options: {
     }),
     { signal: options.signal },
   );
+}
+
+export function getNotifications(signal?: AbortSignal) {
+  return requestJson<NotificationsResponse>('/api/notifications/', { signal });
+}
+
+export function markNotificationsRead(ids: number[], signal?: AbortSignal) {
+  return requestJson<MarkNotificationsReadResponse>('/api/notifications/mark-read/', {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+    signal,
+  });
 }

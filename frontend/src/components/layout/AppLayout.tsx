@@ -5,7 +5,9 @@ import AuthGate from '../auth/AuthGate';
 import DashboardSidebar, { type DashboardThemeMode } from '../dashboard/DashboardSidebar';
 import LoadingState from '../common/LoadingState';
 import AppShell from './AppShell';
+import NotificationBell from './NotificationBell';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { useNotifications } from '../../hooks/useNotifications';
 import { buildNextPath, parseDashboardMinutes, parseServerParam, withDashboardQuery } from '../../lib/query';
 
 function getInitialThemeMode(): DashboardThemeMode {
@@ -44,6 +46,7 @@ export default function AppLayout() {
     minutes: fetchMinutes,
     liveRefreshEnabled: location.pathname === '/dashboard' || location.pathname === '/system',
   });
+  const notifications = useNotifications();
 
   const selectedServerSlug = data.selectedServer?.slug ?? requestedServer;
 
@@ -118,7 +121,19 @@ export default function AppLayout() {
   const context: AppLayoutContext = { data, themeMode, searchParams, setSearchParams, systemMinutes, ioMinutes };
 
   return (
-    <AppShell title={title} subtitle={subtitle} sidebar={sidebar} themeMode={themeMode}>
+    <AppShell
+      title={title}
+      subtitle={subtitle}
+      sidebar={sidebar}
+      themeMode={themeMode}
+      headerActions={(
+        <NotificationBell
+          items={notifications.items}
+          unreadCount={notifications.unreadCount}
+          onMarkAllRead={notifications.markAllRead}
+        />
+      )}
+    >
       <Outlet context={context} />
     </AppShell>
   );

@@ -9,6 +9,7 @@ from typing import Any
 from django.conf import settings
 from django.contrib.auth import logout
 from django.db.models import Count, Max
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -16,7 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from monitoring.auth import is_google_email_allowlisted
-from monitoring.models import MetricSnapshot, MonitoredServer
+from monitoring.models import MetricSnapshot, MonitoredServer, Notification
 from monitoring.services.collector import ingest_sample_for_server
 from monitoring.version import BACKEND_VERSION, MIN_AGENT_VERSION
 
@@ -219,6 +220,7 @@ def api_root(request):
                 "servers": "/api/servers/",
                 "metrics_latest": "/api/metrics/latest/",
                 "metrics_history": "/api/metrics/history/",
+                "notifications": "/api/notifications/",
                 "google_login": "/accounts/google/login/",
                 "admin": "/admin/",
             },
@@ -304,6 +306,56 @@ def api_metrics_latest(request):
             "min_agent_version": MIN_AGENT_VERSION,
         }
     )
+
+
+@require_GET
+def api_notifications(request):
+    if not request.user.is_authenticated:
+        return _api_auth_required_response(request)
+    denied = _deny_if_not_allowlisted(request)
+    if denied is not None:
+        return denied
+
+    qs = Notification.objects.select_related("server").order_by("-created_at")[:50]
+    payload = [
+        {
+            "id": note.id,
+            "level": note.level,
+            "title": note.title,
+            "message": note.message,
+            "code": note.code,
+            "is_read": note.is_read,
+            "created_at": note.created_at.isoformat(),
+            "server": _serialize_server(note.server) if note.server_id and note.server else None,
+        }
+        for note in qs
+    ]
+    return JsonResponse({"ok": True, "notifications": payload})
+
+
+@csrf_exempt
+@require_POST
+def api_notifications_mark_read(request):
+    if not request.user.is_authenticated:
+        return _api_auth_required_response(request)
+    denied = _deny_if_not_allowlisted(request)
+    if denied is not None:
+        return denied
+
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse({"ok": False, "error": "Invalid JSON payload."}, status=400)
+    ids = body.get("ids") if isinstance(body, dict) else None
+    if not isinstance(ids, list):
+        return JsonResponse({"ok": False, "error": "ids must be a list."}, status=400)
+    cleaned_ids = [int(i) for i in ids if isinstance(i, int) or (isinstance(i, str) and i.isdigit())]
+    if not cleaned_ids:
+        return JsonResponse({"ok": True, "updated": 0})
+
+    with transaction.atomic():
+        updated = Notification.objects.filter(id__in=cleaned_ids).update(is_read=True)
+    return JsonResponse({"ok": True, "updated": updated})
 
 
 @require_GET

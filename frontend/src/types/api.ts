@@ -233,3 +233,26 @@ export interface HistoryMetricsResponse {
   backend_version?: string;
   min_agent_version?: string;
 }
+
+export type NotificationLevel = 'info' | 'warning' | 'critical';
+
+export interface NotificationItem {
+  id: number;
+  level: NotificationLevel;
+  title: string;
+  message: string;
+  code: string;
+  is_read: boolean;
+  created_at: string;
+  server: ServerSummary | null;
+}
+
+export interface NotificationsResponse {
+  ok: true;
+  notifications: NotificationItem[];
+}
+
+export interface MarkNotificationsReadResponse {
+  ok: true;
+  updated: number;
+}

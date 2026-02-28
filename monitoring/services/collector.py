@@ -15,6 +15,7 @@ from django.utils.dateparse import parse_datetime
 from django.utils import timezone
 
 from monitoring.models import DiskMetric, FanMetric, GpuMetric, MetricSnapshot, MonitoredServer
+from monitoring.services.notifications import create_notification
 
 
 PHYSICAL_DISK_RE = re.compile(r"^(nvme\d+n\d+|sd[a-z]+|vd[a-z]+|xvd[a-z]+|md\d+)$")
@@ -774,6 +775,72 @@ def store_raw_metrics_for_server(
         if days and days > 0:
             cutoff = raw["collected_at"] - timedelta(days=days)
             MetricSnapshot.objects.filter(server=server, collected_at__lt=cutoff).delete()
+
+    # Notifications (outside transaction to avoid delays on ingest)
+    try:
+        # High utilization alerts
+        if raw["cpu_usage_percent"] >= 90:
+            create_notification(
+                level="warning",
+                title="High CPU usage",
+                message=f"CPU at {raw['cpu_usage_percent']:.0f}% on {server.name}",
+                code="high_cpu",
+                server=server,
+            )
+        if raw["memory_percent"] >= 90:
+            create_notification(
+                level="warning",
+                title="High memory usage",
+                message=f"Memory at {raw['memory_percent']:.0f}% on {server.name}",
+                code="high_mem",
+                server=server,
+            )
+        if disk_max_util >= 90:
+            create_notification(
+                level="warning",
+                title="High disk utilization",
+                message=f"Disk util at {disk_max_util:.0f}% on {server.name}",
+                code="high_disk",
+                server=server,
+            )
+        if top_gpu_util and top_gpu_util >= 95:
+            create_notification(
+                level="warning",
+                title="High GPU utilization",
+                message=f"GPU util at {top_gpu_util:.0f}% on {server.name}",
+                code="high_gpu",
+                server=server,
+            )
+
+        # Hardware changes (additions only)
+        prev_gpu_count = previous.gpu_count if previous else 0
+        curr_gpu_count = len(gpus)
+        if curr_gpu_count > prev_gpu_count:
+            create_notification(
+                level="info",
+                title="New GPU detected",
+                message=f"{curr_gpu_count} GPU(s) present (was {prev_gpu_count}) on {server.name}",
+                code="gpu_added",
+                server=server,
+                cooldown_minutes=60,
+                email=False,
+            )
+
+        prev_disk_count = len(previous_disks) if previous else 0
+        curr_disk_count = len(raw["disks"])
+        if curr_disk_count > prev_disk_count:
+            create_notification(
+                level="info",
+                title="New disk detected",
+                message=f"{curr_disk_count} disk(s) present (was {prev_disk_count}) on {server.name}",
+                code="disk_added",
+                server=server,
+                cooldown_minutes=60,
+                email=False,
+            )
+    except Exception:
+        # Alerting failures should not block metric ingest
+        pass
 
     return snapshot
 

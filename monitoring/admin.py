@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import DiskMetric, FanMetric, GpuMetric, MetricSnapshot, MonitoredServer
+from .models import DiskMetric, FanMetric, GpuMetric, MetricSnapshot, MonitoredServer, Notification
 
 
 @admin.register(MonitoredServer)
@@ -89,3 +89,11 @@ class MetricSnapshotAdmin(admin.ModelAdmin):
     search_fields = ("bottleneck_reason", "server__name", "server__slug")
     inlines = [GpuMetricInline, DiskMetricInline, FanMetricInline]
     readonly_fields = [field.name for field in MetricSnapshot._meta.fields]
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ("title", "level", "server", "is_read", "created_at")
+    list_filter = ("level", "is_read", "server")
+    search_fields = ("title", "message", "code", "server__name", "server__slug")
+    readonly_fields = [field.name for field in Notification._meta.fields]
