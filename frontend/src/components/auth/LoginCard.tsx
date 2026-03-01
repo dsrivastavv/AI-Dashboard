@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { Activity, BellRing, BrainCircuit, Network } from 'lucide-react';
+import { BellRing, BrainCircuit, Network, SquareTerminal } from 'lucide-react';
 import BrandName from '../common/BrandName';
 import {
   AUTH_COPY,
   LOGIN_FEATURES,
+  LOGIN_KICKER,
   LOGIN_METRICS,
   type LoginFeatureIcon,
   MARKETING_COPY,
-  PRODUCT_TAGLINE,
 } from '../../config/branding';
 import { BRAND_COLORS } from '../../config/colors';
 
@@ -56,8 +56,8 @@ function MetricBar({ label, value, color }: { label: string; value: number; colo
 function FeatureGlyph({ icon }: { icon: LoginFeatureIcon }) {
   const props = { size: 18, strokeWidth: 2.1, 'aria-hidden': true as const };
   switch (icon) {
-    case 'telemetry':
-      return <Activity {...props} />;
+    case 'terminal':
+      return <SquareTerminal {...props} />;
     case 'cluster':
       return <Network {...props} />;
     case 'bottleneck':
@@ -65,7 +65,7 @@ function FeatureGlyph({ icon }: { icon: LoginFeatureIcon }) {
     case 'alerts':
       return <BellRing {...props} />;
     default:
-      return <Activity {...props} />;
+      return <SquareTerminal {...props} />;
   }
 }
 
@@ -182,11 +182,18 @@ export default function LoginCard({
         {/* ── Left: login ── */}
         <div className="aid-left">
           <div className="aid-brand">
-            <BrandName />
+            <a
+              className="aid-brand-link"
+              href="/login"
+              aria-disabled="true"
+              tabIndex={-1}
+            >
+              <BrandName />
+            </a>
           </div>
 
           <div className="aid-card">
-            <h2 className="aid-card-heading">{heading}</h2>
+            {mode !== 'signin' && <h2 className="aid-card-heading">{heading}</h2>}
 
             {mode === 'signin' && (
               <>
@@ -376,19 +383,18 @@ export default function LoginCard({
               </form>
             )}
 
-        </div>
-        </div>
+          </div>{/* aid-card */}
+          <p className="aid-left-footer">{AUTH_COPY.legalNote}</p>
+        </div>{/* aid-left */}
 
         {/* ── Right: features ── */}
         <div className="aid-right" aria-hidden="true">
-          <p className="aid-kicker">{PRODUCT_TAGLINE}</p>
+          <p className="aid-kicker">{LOGIN_KICKER}</p>
           <h2 className="aid-title">
             {MARKETING_COPY.heroHeading.split('\n').map((line, i, arr) => (
               <span key={i}>{line}{i < arr.length - 1 ? <br /> : null}</span>
             ))}
           </h2>
-          <p className="aid-sub">{MARKETING_COPY.heroSub}</p>
-
           {/* Live metrics */}
           <div className="aid-metrics-panel">
             <div className="aid-metrics-heading">

@@ -1,10 +1,14 @@
 // Centralized product branding strings used across the UI.
 // Edit here to update copy without touching individual components.
+import { ENTITY_COLORS } from './colors';
 
 export const PRODUCT_NAME = 'AI Dashboard';
 
 export const PRODUCT_TAGLINE =
   'Operate AI infrastructure with clarity, speed, and confidence.';
+
+// Short badge shown in the login page right-panel kicker pill
+export const LOGIN_KICKER = 'AI Infrastructure Platform';
 
 export const DEFAULT_SERVER_NAME = 'Operations Center';
 
@@ -85,7 +89,7 @@ export const MARKETING_COPY = {
 
 // ── Login page — right-panel feature highlights ──────────────────────────────
 
-export type LoginFeatureIcon = 'telemetry' | 'cluster' | 'bottleneck' | 'alerts';
+export type LoginFeatureIcon = 'terminal' | 'cluster' | 'bottleneck' | 'alerts';
 
 export const LOGIN_FEATURES: ReadonlyArray<{
   icon: LoginFeatureIcon;
@@ -93,31 +97,29 @@ export const LOGIN_FEATURES: ReadonlyArray<{
   desc: string;
 }> = [
   {
-    icon:  'telemetry',
-    title: 'Live telemetry',
-    desc:  'Second-by-second insight across GPU, CPU, memory, and disk.',
+    icon:  'terminal',
+    title: 'Remote terminal',
+    desc:  'Run commands on any node directly from the browser.',
   },
   {
     icon:  'cluster',
     title: 'Multi-cluster control',
-    desc:  'Monitor distributed training clusters from one unified interface.',
+    desc:  'Monitor distributed clusters from one unified interface.',
   },
   {
     icon:  'bottleneck',
     title: 'Bottleneck intelligence',
-    desc:  'Quickly identify the resource limiting system performance.',
+    desc:  'Pinpoint the resource limiting system performance.',
   },
   {
     icon:  'alerts',
     title: 'Intelligent alerts',
-    desc:  'Proactive alerts for thermal limits and resource saturation.',
+    desc:  'Proactive alerts for thermal limits and saturation.',
   },
 ];
 
 
 // ── Login page — right-panel demo metric bars ────────────────────────────────
-
-import { ENTITY_COLORS } from './colors';
 
 export const LOGIN_METRICS: ReadonlyArray<{
   label: string;
