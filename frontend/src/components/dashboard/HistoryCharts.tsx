@@ -12,6 +12,7 @@ import {
 import { Activity, TrendingUp } from 'lucide-react';
 
 import { ENTITY_COLORS } from '../../lib/entities';
+import { CHART_COLORS } from '../../config/colors';
 import { formatPercent, formatThroughput } from '../../lib/format';
 import type { HistoryPoint } from '../../types/api';
 import EmptyState from '../common/EmptyState';
@@ -119,9 +120,7 @@ export default function HistoryCharts({
   }
 
   const isDark = themeMode === 'dark';
-  const gridStroke = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
-  const axisStroke = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)';
-  const axisColor = isDark ? 'rgba(150, 170, 200, 0.6)' : 'rgba(80, 100, 130, 0.7)';
+  const { gridStroke, axisStroke, axisColor } = CHART_COLORS[isDark ? 'dark' : 'light'];
   const systemWindowStartMs = historyWindowEndMs - systemMinutes * 60 * 1000;
   const ioWindowStartMs = historyWindowEndMs - ioMinutes * 60 * 1000;
   const systemPoints = useMemo(

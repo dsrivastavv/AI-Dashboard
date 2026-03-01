@@ -10,6 +10,7 @@ import NotificationBell from './NotificationBell';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { useNotifications } from '../../hooks/useNotifications';
 import { buildNextPath, parseDashboardMinutes, parseServerParam, withDashboardQuery } from '../../lib/query';
+import { DEFAULT_SERVER_NAME } from '../../config/branding';
 
 function getInitialThemeMode(): DashboardThemeMode {
   if (typeof window === 'undefined') return 'dark';
@@ -107,7 +108,7 @@ export default function AppLayout() {
   const isOnNotifications = location.pathname === '/notifications';
 
   // Large title = workstation/server name; small subtitle = tab name
-  const serverName = data.selectedServer?.name ?? 'Operations Center';
+  const serverName = data.selectedServer?.name ?? DEFAULT_SERVER_NAME;
   const tabLabel = isOnTerminal
     ? 'Terminal'
     : isOnSystemInfo

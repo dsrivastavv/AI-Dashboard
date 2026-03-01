@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 
 import type { HistoryPoint, MetricSnapshot } from '../../types/api';
+import { RADAR_COLORS } from '../../config/colors';
 import type { DashboardThemeMode } from './DashboardSidebar';
 
 interface ResourceRadarPanelProps {
@@ -43,10 +44,7 @@ export default function ResourceRadarPanel({
     { label: 'NET', value: networkPercent },
   ];
 
-  const gridStroke = themeMode === 'dark' ? 'rgba(214, 226, 255, 0.14)' : 'rgba(15, 26, 54, 0.12)';
-  const axisTickFill = themeMode === 'dark' ? '#b9c8e6' : '#5c7293';
-  const radarStroke = themeMode === 'dark' ? '#7a84ff' : '#4252ff';
-  const radarFill = themeMode === 'dark' ? 'rgba(122, 132, 255, 0.22)' : 'rgba(66, 82, 255, 0.18)';
+  const { gridStroke, axisTickFill, radarStroke, radarFill } = RADAR_COLORS[themeMode];
 
   return (
     <div className="card shadow-sm border-0 panel-card radar-panel h-100">

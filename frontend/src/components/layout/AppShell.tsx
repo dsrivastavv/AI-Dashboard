@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
+import { PRODUCT_NAME } from '../../config/branding';
 
 interface AppShellProps {
   title: string;
@@ -51,7 +52,7 @@ export default function AppShell({
 
   // Keep browser title in sync with the active view
   useEffect(() => {
-    const nextTitle = subtitle ? `${title} · ${subtitle} | AI Dashboard` : `${title} | AI Dashboard`;
+    const nextTitle = subtitle ? `${title} · ${subtitle} | ${PRODUCT_NAME}` : `${title} | ${PRODUCT_NAME}`;
     document.title = nextTitle;
   }, [title, subtitle]);
 

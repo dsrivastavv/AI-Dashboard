@@ -1,13 +1,7 @@
-export type MetricEntity = 'cpu' | 'memory' | 'gpu' | 'disk' | 'network' | 'neutral';
-
-export const ENTITY_COLORS: Record<MetricEntity, string> = {
-  cpu: '#3b82f6',
-  memory: '#14b8a6',
-  gpu: '#f97316',
-  disk: '#8b5cf6',
-  network: '#22c55e',
-  neutral: '#64748b',
-};
+// MetricEntity and ENTITY_COLORS are defined in config/colors.ts (shared with login UI).
+export type { MetricEntity } from '../config/colors';
+export { ENTITY_COLORS } from '../config/colors';
+import type { MetricEntity } from '../config/colors';
 
 export function getBottleneckEntity(label: string | null | undefined): MetricEntity {
   const normalized = (label || '').toLowerCase();

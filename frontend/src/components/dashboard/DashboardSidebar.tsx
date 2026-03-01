@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import BrandName from '../common/BrandName';
+import { PRODUCT_TAGLINE } from '../../config/branding';
 import {
   ArrowLeftRight,
   Bell,
@@ -54,7 +55,7 @@ export default function DashboardSidebar({
           <span className="sidebar-brand-name"><BrandName /></span>
         </div>
         <div className="sidebar-brand-tagline">
-          Real-time AI infrastructure monitoring
+          {PRODUCT_TAGLINE}
         </div>
         <div className="sidebar-brand-by">by Divyansh Srivastava</div>
       </div>

@@ -1,5 +1,12 @@
 import { useState } from 'react';
 import BrandName from '../common/BrandName';
+import {
+  AUTH_COPY,
+  LOGIN_FEATURES,
+  LOGIN_METRICS,
+  MARKETING_COPY,
+  PRODUCT_TAGLINE,
+} from '../../config/branding';
 
 type AuthMode = 'signin' | 'register' | 'forgot';
 type SignInStep = 'email' | 'password';
@@ -43,35 +50,8 @@ function MetricBar({ label, value, color }: { label: string; value: number; colo
   );
 }
 
-const FEATURES = [
-  {
-    gif: '/gif/lightning.gif',
-    title: 'Live telemetry',
-    desc: 'GPU, CPU, memory & disk — updated every second.',
-  },
-  {
-    gif: '/gif/desktop.gif',
-    title: 'Multi-server',
-    desc: 'Monitor unlimited training nodes from one dashboard.',
-  },
-  {
-    gif: '/gif/brain.gif',
-    title: 'AI bottleneck detection',
-    desc: 'Automatically surfaces the resource limiting your runs.',
-  },
-  {
-    gif: '/gif/bell.gif',
-    title: 'Smart alerts',
-    desc: 'Instant notifications on thermal limits & resource saturation.',
-  },
-];
-
-const METRICS: { label: string; value: number; color: string }[] = [
-  { label: 'GPU A100  ·  utilisation', value: 87, color: '#f97316' },
-  { label: 'CPU  ·  usage', value: 52, color: '#3b82f6' },
-  { label: 'Memory', value: 68, color: '#14b8a6' },
-  { label: 'Disk I/O', value: 34, color: '#8580b5' },
-];
+const FEATURES = LOGIN_FEATURES;
+const METRICS = LOGIN_METRICS;
 
 // ── Eye icon ─────────────────────────────────────────────────────────────────
 function EyeIcon({ open }: { open: boolean }) {
@@ -121,6 +101,12 @@ export default function LoginCard({
 
   const busy = isCheckingSession || isLoading;
   const passwordMismatch = regConfirm.length > 0 && regPassword !== regConfirm;
+  const heading =
+    mode === 'register'
+      ? AUTH_COPY.registerHeading
+      : mode === 'forgot'
+        ? AUTH_COPY.resetHeading
+        : AUTH_COPY.signInHeading;
 
   function handleEmailStep(e: React.FormEvent) {
     e.preventDefault();
@@ -152,7 +138,7 @@ export default function LoginCard({
   }
 
   const alertMsg = showAccessDenied
-    ? 'Access denied. Your Google account is not in the allowlist.'
+    ? AUTH_COPY.accessDeniedError
     : error || successMessage || '';
   const alertVariant = successMessage && !showAccessDenied && !error ? 'success' : 'error';
   const toast = alertMsg ? (
@@ -181,9 +167,7 @@ export default function LoginCard({
           </div>
 
           <div className="aid-card">
-            <h2 className="aid-card-heading">
-              {mode === 'register' ? 'Create account' : mode === 'forgot' ? 'Reset password' : 'Sign in'}
-            </h2>
+            <h2 className="aid-card-heading">{heading}</h2>
 
             {mode === 'signin' && (
               <>
@@ -194,20 +178,20 @@ export default function LoginCard({
                   disabled={busy}
                 >
                   <GoogleMark />
-                  <span>{isCheckingSession ? 'Checking session…' : 'Continue with Google'}</span>
+                  <span>{isCheckingSession ? AUTH_COPY.googleBtnChecking : AUTH_COPY.googleBtn}</span>
                 </button>
 
-                <div className="aid-divider">OR</div>
+                <div className="aid-divider">{AUTH_COPY.orDivider}</div>
 
                 {siStep === 'email' ? (
                   <form className="aid-form" onSubmit={handleEmailStep} noValidate>
-                    <label className="aid-label" htmlFor="si-email">Email</label>
+                    <label className="aid-label" htmlFor="si-email">{AUTH_COPY.emailLabel}</label>
                     <input
                       id="si-email"
                       className="aid-input"
                       type="email"
                       autoComplete="email"
-                      placeholder="you@example.com"
+                      placeholder={AUTH_COPY.emailPlaceholder}
                       value={siEmail}
                       onChange={(e) => setSiEmail(e.target.value)}
                       disabled={busy}
@@ -216,7 +200,7 @@ export default function LoginCard({
                     />
                     <div className="aid-links">
                       <button type="button" className="aid-link" onClick={() => switchMode('forgot')}>
-                        Forgot password?
+                        {AUTH_COPY.forgotPasswordLink}
                       </button>
                     </div>
                     <button
@@ -224,19 +208,19 @@ export default function LoginCard({
                       className="aid-submit"
                       disabled={busy || !siEmail.trim()}
                     >
-                      Continue with Email
+                      {AUTH_COPY.emailContinueBtn}
                     </button>
                   </form>
                 ) : (
                   <form className="aid-form" onSubmit={handleSignIn} noValidate>
-                    <label className="aid-label" htmlFor="si-password">Password</label>
+                    <label className="aid-label" htmlFor="si-password">{AUTH_COPY.passwordLabel}</label>
                     <div className="aid-input-wrap">
                       <input
                         id="si-password"
                         className="aid-input"
                         type={siShowPass ? 'text' : 'password'}
                         autoComplete="current-password"
-                        placeholder="••••••••"
+                        placeholder={AUTH_COPY.passwordPlaceholder}
                         value={siPassword}
                         onChange={(e) => setSiPassword(e.target.value)}
                         disabled={busy}
@@ -247,7 +231,7 @@ export default function LoginCard({
                         type="button"
                         className="aid-eye"
                         onClick={() => setSiShowPass((v) => !v)}
-                        aria-label={siShowPass ? 'Hide password' : 'Show password'}
+                        aria-label={siShowPass ? AUTH_COPY.hidePasswordLabel : AUTH_COPY.showPasswordLabel}
                       >
                         <EyeIcon open={siShowPass} />
                       </button>
@@ -258,7 +242,7 @@ export default function LoginCard({
                       className="aid-submit"
                       disabled={busy || !siPassword}
                     >
-                      {isLoading ? 'Signing in…' : 'Sign in'}
+                      {isLoading ? AUTH_COPY.signInBtnLoading : AUTH_COPY.signInBtn}
                     </button>
                   </form>
                 )}
@@ -267,38 +251,38 @@ export default function LoginCard({
 
             {mode === 'register' && (
               <form className="aid-form" onSubmit={handleRegister} noValidate>
-                <label className="aid-label" htmlFor="reg-username">Username</label>
+                <label className="aid-label" htmlFor="reg-username">{AUTH_COPY.usernameLabel}</label>
                 <input
                   id="reg-username"
                   className="aid-input"
                   type="text"
                   autoComplete="username"
-                  placeholder="choose a username"
+                  placeholder={AUTH_COPY.usernamePlaceholder}
                   value={regUsername}
                   onChange={(e) => setRegUsername(e.target.value)}
                   disabled={busy}
                 />
 
-                <label className="aid-label" htmlFor="reg-email">Email</label>
+                <label className="aid-label" htmlFor="reg-email">{AUTH_COPY.emailLabel}</label>
                 <input
                   id="reg-email"
                   className="aid-input"
                   type="email"
                   autoComplete="email"
-                  placeholder="you@example.com"
+                  placeholder={AUTH_COPY.emailPlaceholder}
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
                   disabled={busy}
                 />
 
-                <label className="aid-label" htmlFor="reg-password">Password</label>
+                <label className="aid-label" htmlFor="reg-password">{AUTH_COPY.passwordLabel}</label>
                 <div className="aid-input-wrap">
                   <input
                     id="reg-password"
                     className="aid-input"
                     type={regShowPass ? 'text' : 'password'}
                     autoComplete="new-password"
-                    placeholder="min 8 characters"
+                    placeholder={AUTH_COPY.passwordNewPlaceholder}
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
                     disabled={busy}
@@ -307,36 +291,36 @@ export default function LoginCard({
                     type="button"
                     className="aid-eye"
                     onClick={() => setRegShowPass((v) => !v)}
-                    aria-label={regShowPass ? 'Hide password' : 'Show password'}
+                    aria-label={regShowPass ? AUTH_COPY.hidePasswordLabel : AUTH_COPY.showPasswordLabel}
                   >
                     <EyeIcon open={regShowPass} />
                   </button>
                 </div>
 
-                <label className="aid-label" htmlFor="reg-confirm">Confirm password</label>
+                <label className="aid-label" htmlFor="reg-confirm">{AUTH_COPY.confirmPasswordLabel}</label>
                 <input
                   id="reg-confirm"
                   className={`aid-input${passwordMismatch ? ' aid-input--error' : ''}`}
                   type={regShowPass ? 'text' : 'password'}
                   autoComplete="new-password"
-                  placeholder="repeat password"
+                  placeholder={AUTH_COPY.confirmPasswordPlaceholder}
                   value={regConfirm}
                   onChange={(e) => setRegConfirm(e.target.value)}
                   disabled={busy}
                 />
-                {passwordMismatch && <p className="aid-error-text">Passwords don't match</p>}
+                {passwordMismatch && <p className="aid-error-text">{AUTH_COPY.passwordMismatchError}</p>}
 
                 <button
                   type="submit"
                   className="aid-submit"
                   disabled={busy || !regUsername.trim() || !regEmail.trim() || !regPassword || passwordMismatch}
                 >
-                  {isLoading ? 'Creating…' : 'Create account'}
+                  {isLoading ? AUTH_COPY.createAccountBtnLoading : AUTH_COPY.createAccountBtn}
                 </button>
 
                 <div className="aid-links">
                   <button type="button" className="aid-link" onClick={() => switchMode('signin')}>
-                    Back to sign in
+                    {AUTH_COPY.backToSignIn}
                   </button>
                 </div>
               </form>
@@ -344,14 +328,14 @@ export default function LoginCard({
 
             {mode === 'forgot' && (
               <form className="aid-form" onSubmit={handleForgotPassword} noValidate>
-                <p className="aid-help">Enter your email and we'll send you a reset link.</p>
-                <label className="aid-label" htmlFor="fp-email">Email</label>
+                <p className="aid-help">{AUTH_COPY.forgotPasswordHelp}</p>
+                <label className="aid-label" htmlFor="fp-email">{AUTH_COPY.emailLabel}</label>
                 <input
                   id="fp-email"
                   className="aid-input"
                   type="email"
                   autoComplete="email"
-                  placeholder="you@example.com"
+                  placeholder={AUTH_COPY.emailPlaceholder}
                   value={fpEmail}
                   onChange={(e) => setFpEmail(e.target.value)}
                   disabled={busy}
@@ -362,44 +346,46 @@ export default function LoginCard({
                   className="aid-submit"
                   disabled={busy || !fpEmail.trim()}
                 >
-                  {isLoading ? 'Sending…' : 'Send reset link'}
+                  {isLoading ? AUTH_COPY.sendResetBtnLoading : AUTH_COPY.sendResetBtn}
                 </button>
 
                 <div className="aid-links">
                   <button type="button" className="aid-link" onClick={() => switchMode('signin')}>
-                    Back to sign in
+                    {AUTH_COPY.backToSignIn}
                   </button>
                 </div>
               </form>
             )}
 
-            <p className="aid-note">
-              By continuing, you agree to AI Dashboard&apos;s Privacy Policy and Terms.
-            </p>
+            <p className="aid-note">{AUTH_COPY.legalNote}</p>
 
           </div>
         </div>
 
         {/* ── Right: features ── */}
         <div className="aid-right" aria-hidden="true">
-          <p className="aid-kicker">Real-time AI infrastructure monitoring</p>
-          <h2 className="aid-title">Your cluster,<br />always in view</h2>
-          <p className="aid-sub">Track GPU, CPU, memory and disk across every training node — from one unified dashboard.</p>
+          <p className="aid-kicker">{PRODUCT_TAGLINE}</p>
+          <h2 className="aid-title">
+            {MARKETING_COPY.heroHeading.split('\n').map((line, i, arr) => (
+              <span key={i}>{line}{i < arr.length - 1 ? <br /> : null}</span>
+            ))}
+          </h2>
+          <p className="aid-sub">{MARKETING_COPY.heroSub}</p>
 
           {/* Server status bar */}
           <div className="aid-preview-header">
             <div className="aid-preview-status">
               <span className="aid-live-dot" />
-              <span className="aid-preview-server">gpu-cluster-01</span>
+              <span className="aid-preview-server">{MARKETING_COPY.previewServerName}</span>
             </div>
-            <span className="aid-preview-badge">4 servers online</span>
+            <span className="aid-preview-badge">{MARKETING_COPY.previewBadge}</span>
           </div>
 
           {/* Live metrics */}
           <div className="aid-metrics-panel">
             <div className="aid-metrics-heading">
               <span className="aid-metrics-live-dot" />
-              Live telemetry
+              {MARKETING_COPY.liveMetricsHeading}
             </div>
             {METRICS.map((m) => (
               <MetricBar key={m.label} {...m} />
