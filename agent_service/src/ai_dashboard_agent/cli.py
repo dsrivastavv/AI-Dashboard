@@ -121,6 +121,12 @@ def _state_path() -> Path:
     return _SYSTEM_STATE if os.getuid() == 0 else _USER_STATE
 
 
+def _default_config_path() -> Path:
+    if os.getuid() == 0:
+        return _SYSTEM_CONFIG if _SYSTEM_CONFIG.exists() else _USER_CONFIG
+    return _USER_CONFIG if _USER_CONFIG.exists() else _SYSTEM_CONFIG
+
+
 def _load_state() -> dict[str, str]:
     try:
         data = json.loads(_state_path().read_text())
@@ -210,7 +216,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--config",
         default="",
-        help="Path to agent config file (default: /etc/ai-dashboard-agent/agent.conf)",
+        help="Path to agent config file (default: root=/etc/ai-dashboard-agent/agent.conf, user=~/.config/ai-dashboard-agent/agent.conf)",
     )
 
     # Self-auth (new)
@@ -302,9 +308,7 @@ def _do_enroll(
 
 def run(args: argparse.Namespace) -> int:  # noqa: C901
     # Resolve config file
-    config_path = Path(args.config) if args.config else (
-        _SYSTEM_CONFIG if _SYSTEM_CONFIG.exists() else _USER_CONFIG
-    )
+    config_path = Path(args.config) if args.config else _default_config_path()
     cfg = _load_config_file(config_path)
 
     # Build resolved settings (CLI > env > config file > default)

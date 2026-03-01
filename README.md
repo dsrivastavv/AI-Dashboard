@@ -3,7 +3,7 @@
 Multi-server AI training system health dashboard with:
 
 - central Django webapp (API + auth + storage)
-- pip-installable agent for each monitored server
+- apt-installable agent for each monitored server
 - React frontend (`frontend/`) built with Vite + Bootstrap
 - Google login with allowlisted users
 - per-server CPU / GPU / memory / disk / network telemetry
@@ -91,17 +91,33 @@ Save the printed `INGEST_TOKEN`.
 
 ## 4. Install and Run the Agent on the Remote Server
 
+Linux (`apt`) path:
+
+```bash
+cd agent_service
+./build-deb.sh
+sudo apt install ../ai-dashboard-agent_*_all.deb
+
+# installs config + enables service auto-start on boot
+sudo AI_DASHBOARD_HOST=http://<webapp-host>:8000 \
+     AI_DASHBOARD_USERNAME='<DASHBOARD_USERNAME>' \
+     AI_DASHBOARD_PASSWORD='<DASHBOARD_PASSWORD>' \
+     bash ./install.sh
+```
+
+macOS (or Linux without package install):
+
 ```bash
 cd agent_service
 conda env create -f environment.yml
 conda activate ai-dashboard-agent
-pip install .
 
-ai-dashboard-agent \
-  --host http://<webapp-host>:8000 \
-  --server-slug gpu-box-01 \
-  --token 'YOUR_INGEST_TOKEN' \
-  --interval 2
+# installs config + enables launchd auto-start on boot
+sudo AI_DASHBOARD_PYTHON="$(which python3)" \
+     AI_DASHBOARD_HOST=http://<webapp-host>:8000 \
+     AI_DASHBOARD_USERNAME='<DASHBOARD_USERNAME>' \
+     AI_DASHBOARD_PASSWORD='<DASHBOARD_PASSWORD>' \
+     bash ./install.sh
 ```
 
 ## 5. Open the Dashboard

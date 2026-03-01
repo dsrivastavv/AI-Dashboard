@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure|abort-upgrade|abort-remove|abort-deconfigure)
+        install -d -m 0755 /etc/ai-dashboard-agent
+        install -d -m 0750 /var/lib/ai-dashboard-agent
+        if [ -f /etc/ai-dashboard-agent/agent.conf ]; then
+            chown root:root /etc/ai-dashboard-agent/agent.conf || true
+            chmod 0640 /etc/ai-dashboard-agent/agent.conf || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

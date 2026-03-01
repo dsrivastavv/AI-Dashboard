@@ -1,40 +1,58 @@
 #!/usr/bin/env bash
 # =============================================================================
-# AI Dashboard Agent – systemd service installer
+# AI Dashboard Agent – cross-platform service installer
 # =============================================================================
+# Linux:
+#   - Ensures apt-installed agent binary exists
+#   - Writes /etc/ai-dashboard-agent/agent.conf
+#   - Enables + starts ai-dashboard-agent.service (systemd, auto-start on boot)
+#
+# macOS:
+#   - Uses local source runner with an explicit Python interpreter
+#   - Writes /etc/ai-dashboard-agent/agent.conf
+#   - Installs + starts launchd daemon (auto-start on boot)
+#
 # Usage (interactive):
 #   sudo bash install.sh
 #
-# Usage (non-interactive / scripted):
+# Usage (non-interactive):
 #   sudo AI_DASHBOARD_HOST=https://dash.example.com \
 #        AI_DASHBOARD_USERNAME=admin \
 #        AI_DASHBOARD_PASSWORD=secret \
 #        bash install.sh
 #
-# What this script does
-# ---------------------
-# 1. Installs the ai-dashboard-agent Python package via pip.
-# 2. Creates /etc/ai-dashboard-agent/agent.conf with the supplied credentials.
-# 3. Writes /etc/systemd/system/ai-dashboard-agent.service.
-# 4. Enables and starts the service (runs on every boot).
+# Linux optional package source:
+#   sudo AI_DASHBOARD_DEB=../ai-dashboard-agent_0.1.0-1_all.deb bash install.sh
 #
-# Idempotent: safe to run multiple times on the same machine.
-# The agent will always register as the same server entry on the dashboard
-# because it identifies itself by /etc/machine-id.
+# macOS optional Python interpreter:
+#   sudo AI_DASHBOARD_PYTHON=/opt/homebrew/bin/python3 bash install.sh
 # =============================================================================
 
 set -euo pipefail
 
-AGENT_PACKAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OS_NAME="$(uname -s)"
+AGENT_SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 SERVICE_NAME="ai-dashboard-agent"
 CONF_DIR="/etc/ai-dashboard-agent"
 CONF_FILE="${CONF_DIR}/agent.conf"
 STATE_DIR="/var/lib/ai-dashboard-agent"
-SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+
+LINUX_DEB_PATH="${AI_DASHBOARD_DEB:-}"
+
+MAC_LABEL="com.ai-dashboard.agent"
+MAC_PLIST="/Library/LaunchDaemons/${MAC_LABEL}.plist"
+MAC_RUNNER="/usr/local/bin/ai-dashboard-agent-source-runner"
+MAC_PYTHON="${AI_DASHBOARD_PYTHON:-$(command -v python3 || true)}"
 
 # ── Privilege check -----------------------------------------------------------
 if [[ "${EUID}" -ne 0 ]]; then
     echo "ERROR: This installer must be run as root (use sudo)." >&2
+    exit 1
+fi
+
+if [[ "${OS_NAME}" != "Linux" && "${OS_NAME}" != "Darwin" ]]; then
+    echo "ERROR: Unsupported OS '${OS_NAME}'. Supported: Linux, macOS." >&2
     exit 1
 fi
 
@@ -43,7 +61,6 @@ HOST="${AI_DASHBOARD_HOST:-}"
 USERNAME="${AI_DASHBOARD_USERNAME:-}"
 PASSWORD="${AI_DASHBOARD_PASSWORD:-}"
 INTERVAL="${AI_DASHBOARD_INTERVAL:-2}"
-PYTHON="${PYTHON:-$(command -v python3 || true)}"
 
 if [[ -z "${HOST}" ]]; then
     read -rp "Dashboard URL (e.g. https://your-dashboard.example.com): " HOST
@@ -61,55 +78,16 @@ if [[ -z "${HOST}" || -z "${USERNAME}" || -z "${PASSWORD}" ]]; then
     exit 1
 fi
 
-# Strip trailing slash
 HOST="${HOST%/}"
 
-# ── Find Python ---------------------------------------------------------------
-if [[ -z "${PYTHON}" ]]; then
-    echo "ERROR: python3 not found. Install Python 3.10+ and re-run." >&2
-    exit 1
-fi
-
-PYTHON_VERSION=$("${PYTHON}" -c "import sys; print('%d.%d' % sys.version_info[:2])")
-echo "Using Python ${PYTHON_VERSION} at ${PYTHON}"
-
-# ── Install the agent package -------------------------------------------------
-echo ""
-echo "Installing ai-dashboard-agent ..."
-"${PYTHON}" -m pip install --quiet --upgrade "${AGENT_PACKAGE_DIR}"
-
-AGENT_BIN=$(command -v ai-dashboard-agent 2>/dev/null || \
-    "${PYTHON}" -c "import shutil, sys; b=shutil.which('ai-dashboard-agent'); print(b or '')")
-
-if [[ -z "${AGENT_BIN}" ]]; then
-    # Try the user/local bin paths pip may have used
-    for candidate in \
-        /usr/local/bin/ai-dashboard-agent \
-        "${HOME}/.local/bin/ai-dashboard-agent" \
-        "$("${PYTHON}" -c "import sysconfig; print(sysconfig.get_path('scripts'))" 2>/dev/null || true)/ai-dashboard-agent"; do
-        if [[ -x "${candidate}" ]]; then
-            AGENT_BIN="${candidate}"
-            break
-        fi
-    done
-fi
-
-if [[ -z "${AGENT_BIN}" ]]; then
-    echo "ERROR: ai-dashboard-agent binary not found after install." >&2
-    echo "Ensure pip scripts directory is on PATH and retry." >&2
-    exit 1
-fi
-echo "Agent binary: ${AGENT_BIN}"
-
-# ── Create directories --------------------------------------------------------
+# ── Common config/state -------------------------------------------------------
 install -d -m 750 "${CONF_DIR}"
 install -d -m 750 "${STATE_DIR}"
 
-# ── Write config file ---------------------------------------------------------
 cat > "${CONF_FILE}" <<EOF
 # AI Dashboard Agent configuration
 # Generated by install.sh on $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-# Edit this file to change settings, then: systemctl restart ${SERVICE_NAME}
+# Edit this file to change settings, then restart the agent service.
 
 AI_DASHBOARD_HOST=${HOST}
 AI_DASHBOARD_USERNAME=${USERNAME}
@@ -118,66 +96,129 @@ AI_DASHBOARD_INTERVAL=${INTERVAL}
 # AI_DASHBOARD_LOG_LEVEL=INFO
 # AI_DASHBOARD_DISKS=sda,sdb
 EOF
+
+if [[ "${OS_NAME}" == "Darwin" ]]; then
+    chown root:wheel "${CONF_FILE}"
+else
+    chown root:root "${CONF_FILE}"
+fi
 chmod 640 "${CONF_FILE}"
 echo "Config written to ${CONF_FILE}"
 
-# ── Write systemd unit --------------------------------------------------------
-cat > "${SERVICE_FILE}" <<EOF
-[Unit]
-Description=AI Dashboard Agent
-Documentation=https://github.com/dsrivastavv/AI-Dashboard
-After=network-online.target
-Wants=network-online.target
-StartLimitIntervalSec=120
-StartLimitBurst=5
+# ── Linux path: apt + systemd ------------------------------------------------
+if [[ "${OS_NAME}" == "Linux" ]]; then
+    if ! command -v ai-dashboard-agent >/dev/null 2>&1; then
+        if [[ -n "${LINUX_DEB_PATH}" ]]; then
+            echo "Installing ai-dashboard-agent from ${LINUX_DEB_PATH} ..."
+            apt install -y "${LINUX_DEB_PATH}"
+        else
+            echo "Installing ai-dashboard-agent from apt repositories ..."
+            if ! apt install -y ai-dashboard-agent; then
+                echo "ERROR: Could not install ai-dashboard-agent from apt." >&2
+                echo "Provide AI_DASHBOARD_DEB=/path/to/ai-dashboard-agent_*_all.deb" >&2
+                exit 1
+            fi
+        fi
+    fi
 
-[Service]
-Type=simple
-ExecStart=${AGENT_BIN} --config ${CONF_FILE} --quiet
-Restart=on-failure
-RestartSec=10s
+    if ! AGENT_BIN="$(command -v ai-dashboard-agent 2>/dev/null)"; then
+        echo "ERROR: ai-dashboard-agent binary not found after apt install." >&2
+        exit 1
+    fi
+    echo "Agent binary: ${AGENT_BIN}"
 
-# Drop privileges
-User=root
-# Optionally run as a dedicated user by creating one and chown-ing the dirs:
-#   useradd -r -s /usr/sbin/nologin aidashboard
-#   chown -R aidashboard: /etc/ai-dashboard-agent /var/lib/ai-dashboard-agent
-# Then set:
-#   User=aidashboard
+    systemctl daemon-reload
+    systemctl enable --now "${SERVICE_NAME}"
 
-# Basic sandboxing
-ProtectSystem=strict
-ProtectHome=read-only
-ReadWritePaths=${STATE_DIR}
-PrivateTmp=true
-NoNewPrivileges=true
+    echo ""
+    echo "==================================================================="
+    echo "  AI Dashboard Agent installed and started successfully (Linux)."
+    echo "  Service   : ${SERVICE_NAME}.service"
+    echo "  Config    : ${CONF_FILE}"
+    echo "  State     : ${STATE_DIR}/state.json"
+    echo "  Autostart : enabled (systemd)"
+    echo ""
+    echo "  Useful commands:"
+    echo "    systemctl status ${SERVICE_NAME}"
+    echo "    journalctl -u ${SERVICE_NAME} -f"
+    echo "    systemctl restart ${SERVICE_NAME}"
+    echo "==================================================================="
+    exit 0
+fi
 
-# Logging (journald captures stdout/stderr automatically)
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=${SERVICE_NAME}
+# ── macOS path: source runner + launchd --------------------------------------
+if [[ -z "${MAC_PYTHON}" ]]; then
+    echo "ERROR: python3 not found." >&2
+    echo "Set AI_DASHBOARD_PYTHON=/path/to/python3 and retry." >&2
+    exit 1
+fi
 
-[Install]
-WantedBy=multi-user.target
+if ! PYTHONPATH="${AGENT_SOURCE_DIR}/src" "${MAC_PYTHON}" -c "import psutil, requests, ai_dashboard_agent" >/dev/null 2>&1; then
+    echo "ERROR: Python environment is missing required modules for the agent." >&2
+    echo "Use a prepared environment and pass AI_DASHBOARD_PYTHON, for example:" >&2
+    echo "  sudo AI_DASHBOARD_PYTHON=/opt/homebrew/bin/python3 bash install.sh" >&2
+    exit 1
+fi
+
+install -d -m 755 /usr/local/bin
+cat > "${MAC_RUNNER}" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export PYTHONPATH="${AGENT_SOURCE_DIR}/src\${PYTHONPATH:+:\$PYTHONPATH}"
+exec "${MAC_PYTHON}" -m ai_dashboard_agent "\$@"
 EOF
-echo "Service unit written to ${SERVICE_FILE}"
+chmod 755 "${MAC_RUNNER}"
+chown root:wheel "${MAC_RUNNER}"
 
-# ── Enable and start ----------------------------------------------------------
-systemctl daemon-reload
-systemctl enable --now "${SERVICE_NAME}"
+cat > "${MAC_PLIST}" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>${MAC_LABEL}</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>${MAC_RUNNER}</string>
+    <string>--config</string>
+    <string>${CONF_FILE}</string>
+    <string>--quiet</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>WorkingDirectory</key>
+  <string>${AGENT_SOURCE_DIR}</string>
+  <key>StandardOutPath</key>
+  <string>/var/log/ai-dashboard-agent.log</string>
+  <key>StandardErrorPath</key>
+  <string>/var/log/ai-dashboard-agent.err.log</string>
+</dict>
+</plist>
+EOF
+
+chmod 644 "${MAC_PLIST}"
+chown root:wheel "${MAC_PLIST}"
+
+# Replace existing service definition (if any), then load + start.
+launchctl bootout system "${MAC_PLIST}" >/dev/null 2>&1 || true
+launchctl bootstrap system "${MAC_PLIST}"
+launchctl enable "system/${MAC_LABEL}"
+launchctl kickstart -k "system/${MAC_LABEL}"
 
 echo ""
 echo "==================================================================="
-echo "  AI Dashboard Agent installed and started successfully."
-echo ""
-echo "  Dashboard : ${HOST}"
-echo "  Service   : ${SERVICE_NAME}"
+echo "  AI Dashboard Agent installed and started successfully (macOS)."
+echo "  Service   : ${MAC_LABEL}"
 echo "  Config    : ${CONF_FILE}"
-echo "  State     : ${STATE_DIR}/state.json  (token cache)"
+echo "  State     : ${STATE_DIR}/state.json"
+echo "  Autostart : enabled (launchd)"
 echo ""
 echo "  Useful commands:"
-echo "    systemctl status ${SERVICE_NAME}"
-echo "    journalctl -u ${SERVICE_NAME} -f"
-echo "    systemctl restart ${SERVICE_NAME}"
-echo "    bash uninstall.sh   (to remove)"
+echo "    launchctl print system/${MAC_LABEL}"
+echo "    launchctl kickstart -k system/${MAC_LABEL}"
+echo "    sudo tail -f /var/log/ai-dashboard-agent.log"
 echo "==================================================================="

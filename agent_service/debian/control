@@ -1,0 +1,27 @@
+Source: ai-dashboard-agent
+Section: utils
+Priority: optional
+Maintainer: AI Dashboard Maintainers <maintainers@ai-dashboard.local>
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-python,
+ pybuild-plugin-pyproject,
+ python3-all,
+ python3-setuptools,
+ python3-wheel
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/dsrivastavv/AI-Dashboard
+
+Package: ai-dashboard-agent
+Architecture: all
+Depends:
+ ${misc:Depends},
+ ${python3:Depends}
+Description: system metrics collection agent for AI Dashboard
+ Collects CPU, memory, disk, network, and GPU telemetry from a host and sends
+ samples to an AI Dashboard backend.
+ .
+ The service supports both root/system installations and regular-user runs:
+ root defaults to /etc and /var/lib state paths, while non-root defaults to
+ per-user config/state under ~/.config and ~/.local/share.

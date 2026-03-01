@@ -18,7 +18,7 @@ This design solves the main scaling and usability problems of a single-host dash
 - GPU servers do not need the Django app stack installed
 - Metric persistence and rate computation are centralized
 - Access control is centralized (Google login + allowlist)
-- Agents can be deployed independently via `pip`
+- Agents can be deployed independently (Linux via `apt`, macOS via source runner)
 
 ## Component Diagram (Logical)
 

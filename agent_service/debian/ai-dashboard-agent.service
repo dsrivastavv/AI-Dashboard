@@ -1,0 +1,22 @@
+[Unit]
+Description=AI Dashboard Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/bin/ai-dashboard-agent --config /etc/ai-dashboard-agent/agent.conf --quiet
+Restart=on-failure
+RestartSec=10s
+StateDirectory=ai-dashboard-agent
+StateDirectoryMode=0750
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=/var/lib/ai-dashboard-agent
+
+[Install]
+WantedBy=multi-user.target

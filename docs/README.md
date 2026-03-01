@@ -3,7 +3,7 @@
 This project has two deployable parts:
 
 1. `Webapp Backend` (Django): auth + ingest API + storage
-2. `Agent` (pip-installable): runs on each monitored server and sends metrics to the webapp
+2. `Agent` (apt-installable): runs on each monitored server and sends metrics to the webapp
 3. `Frontend UI` (React + Bootstrap in `frontend/`): dashboard experience that consumes the Django APIs
 
 ## Read This First

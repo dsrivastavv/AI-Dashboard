@@ -1,0 +1,2 @@
+debian/ai-dashboard-agent.service lib/systemd/system/
+debian/agent.conf /etc/ai-dashboard-agent/

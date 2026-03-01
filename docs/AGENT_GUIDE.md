@@ -1,6 +1,6 @@
 # Agent Guide (Remote Monitoring Service)
 
-This guide covers installing and running the pip-installable monitoring agent on remote servers.
+This guide covers installing and running the monitoring agent on Linux and macOS.
 
 ## What the Agent Does
 
@@ -14,22 +14,76 @@ The agent package lives in `agent_service/` and installs a CLI:
 
 ## Install
 
-### Option A: Install From This Repository (Current Setup)
+### Recommended: Install As a Boot-Time Service (Linux + macOS)
+
+Linux:
 
 ```bash
 cd agent_service
-python3 -m venv .venv
-source .venv/bin/activate
-pip install .
+./build-deb.sh
+sudo apt install ../ai-dashboard-agent_*_all.deb
+sudo AI_DASHBOARD_HOST=https://dash.example.com \
+     AI_DASHBOARD_USERNAME='<DASHBOARD_USERNAME>' \
+     AI_DASHBOARD_PASSWORD='<DASHBOARD_PASSWORD>' \
+     bash ./install.sh
 ```
 
-### Option B: Editable Install (If Developing Agent Code)
+macOS:
 
 ```bash
 cd agent_service
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
+conda env create -f environment.yml
+conda activate ai-dashboard-agent
+sudo AI_DASHBOARD_PYTHON="$(which python3)" \
+     AI_DASHBOARD_HOST=https://dash.example.com \
+     AI_DASHBOARD_USERNAME='<DASHBOARD_USERNAME>' \
+     AI_DASHBOARD_PASSWORD='<DASHBOARD_PASSWORD>' \
+     bash ./install.sh
+```
+
+Status / restart:
+
+```bash
+# Linux
+sudo systemctl status ai-dashboard-agent
+sudo systemctl restart ai-dashboard-agent
+
+# macOS
+sudo launchctl print system/com.ai-dashboard.agent
+sudo launchctl kickstart -k system/com.ai-dashboard.agent
+```
+
+### Option A (Linux): Install From a Built `.deb` (Recommended)
+
+```bash
+# regular account
+sudo apt install ./ai-dashboard-agent_*_all.deb
+
+# if already root
+apt install ./ai-dashboard-agent_*_all.deb
+```
+
+### Option B (Linux): Build and Install Debian Package From This Repository
+
+```bash
+cd agent_service
+./build-deb.sh
+
+# regular account
+sudo apt install ../ai-dashboard-agent_*_all.deb
+
+# if already root
+apt install ../ai-dashboard-agent_*_all.deb
+```
+
+### Option C (macOS or Linux): Run From Source Without pip Install
+
+```bash
+cd agent_service
+conda env create -f environment.yml
+conda activate ai-dashboard-agent
+chmod +x ./run-agent.sh
+./run-agent.sh --help
 ```
 
 ## Required Inputs
@@ -49,6 +103,9 @@ ai-dashboard-agent \
   --token 'YOUR_INGEST_TOKEN' \
   --interval 2
 ```
+
+If you are running directly from source (Option C), replace `ai-dashboard-agent`
+with `./run-agent.sh`.
 
 ## CLI Options
 
@@ -158,12 +215,11 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/opt/ai-dashboard-agent
 Environment="AI_DASHBOARD_HOST=https://dashboard.example.com"
 Environment="AI_DASHBOARD_SERVER_SLUG=gpu-box-01"
 Environment="AI_DASHBOARD_TOKEN=REPLACE_ME"
 Environment="AI_DASHBOARD_INTERVAL=2"
-ExecStart=/opt/ai-dashboard-agent/.venv/bin/ai-dashboard-agent --disks nvme0n1,nvme1n1
+ExecStart=/usr/bin/ai-dashboard-agent --disks nvme0n1,nvme1n1
 Restart=always
 RestartSec=5
 
@@ -185,6 +241,9 @@ The agent tries GPU telemetry in this order:
 
 1. NVML (`nvidia-ml-py` / `pynvml` import path)
 2. `nvidia-smi` CSV parsing fallback
+
+`nvidia-ml-py` is optional for runtime portability; if it is not installed, the
+agent automatically falls back to `nvidia-smi`.
 
 If neither works, GPU list is empty and the dashboard classifies bottlenecks without GPU data.
 

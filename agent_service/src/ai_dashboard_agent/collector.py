@@ -12,7 +12,10 @@ import logging
 import psutil
 
 
-PHYSICAL_DISK_RE = re.compile(r"^(nvme\d+n\d+|sd[a-z]+|vd[a-z]+|xvd[a-z]+|md\d+)$")
+# Linux + macOS block-device naming patterns used by psutil per-disk counters.
+PHYSICAL_DISK_RE = re.compile(
+    r"^(nvme\d+n\d+|sd[a-z]+|vd[a-z]+|xvd[a-z]+|md\d+|mmcblk\d+|disk\d+)$"
+)
 logger = logging.getLogger(__name__)
 
 

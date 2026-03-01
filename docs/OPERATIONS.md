@@ -101,9 +101,9 @@ Use your normal `pg_dump` / managed backup flow.
 
 ## Agent Upgrade
 
-1. Update agent package source (or pull latest published version)
-2. `pip install --upgrade .` (or upgrade from package index)
-3. Restart the agent process / systemd service
+1. Install the newer Debian package version (`apt install ./ai-dashboard-agent_*_all.deb` or `apt upgrade ai-dashboard-agent`)
+2. Verify `/etc/ai-dashboard-agent/agent.conf` values
+3. Restart the agent process / systemd service (`systemctl restart ai-dashboard-agent`)
 
 ## Local Collector vs Remote Agent
 
@@ -259,4 +259,3 @@ Recommended additions (future):
 - Use HTTPS for webapp and ingest traffic
 - Restrict inbound access to dashboard and ingest endpoints as appropriate
 - Rotate tokens on decommission or incident response
-
