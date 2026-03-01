@@ -11,6 +11,7 @@ import { useDashboardData } from '../../hooks/useDashboardData';
 import { useNotifications } from '../../hooks/useNotifications';
 import { buildNextPath, parseDashboardMinutes, parseServerParam, withDashboardQuery } from '../../lib/query';
 import { DEFAULT_SERVER_NAME } from '../../config/branding';
+import { applyThemeVariables } from '../../config/colors';
 
 function getInitialThemeMode(): DashboardThemeMode {
   if (typeof window === 'undefined') return 'dark';
@@ -64,6 +65,7 @@ export default function AppLayout() {
     const root = document.documentElement;
     root.dataset.theme = themeMode;
     window.localStorage.setItem('ai-dashboard-theme', themeMode);
+    applyThemeVariables(themeMode);
     return () => { delete root.dataset.theme; };
   }, [themeMode]);
 
