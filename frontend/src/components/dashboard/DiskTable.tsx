@@ -23,40 +23,50 @@ export default function DiskTable({ disks }: DiskTableProps) {
         </h2>
       </div>
       <div className="table-responsive">
-          <table className="dashboard-table">
+          <table className="dashboard-table dashboard-table--disk-stable">
+            <colgroup>
+              <col className="col-disk-device" />
+              <col className="col-disk-read" />
+              <col className="col-disk-write" />
+              <col className="col-disk-util" />
+              <col className="col-disk-riops" />
+              <col className="col-disk-wiops" />
+            </colgroup>
             <thead>
               <tr>
-                <th scope="col">Device</th>
-                <th scope="col">
+                <th scope="col" className="col-disk-device">Device</th>
+                <th scope="col" className="col-disk-read">
                   <span className="th-icon-label">
                     <ArrowDown size={12} aria-hidden="true" /> Read
                   </span>
                 </th>
-                <th scope="col">
+                <th scope="col" className="col-disk-write">
                   <span className="th-icon-label">
                     <ArrowUp size={12} aria-hidden="true" /> Write
                   </span>
                 </th>
-                <th scope="col">
+                <th scope="col" className="col-disk-util">
                   <span className="th-icon-label">
                     <Zap size={12} aria-hidden="true" /> Util
                   </span>
                 </th>
-                <th scope="col">Read IOPS</th>
-                <th scope="col">Write IOPS</th>
+                <th scope="col" className="col-disk-riops">Read IOPS</th>
+                <th scope="col" className="col-disk-wiops">Write IOPS</th>
               </tr>
             </thead>
             <tbody>
               {disks.map((disk) => (
                 <tr key={disk.device}>
-                  <td className="fw-semibold">{disk.device}</td>
-                  <td>{formatThroughput(disk.read_bps)}</td>
-                  <td>{formatThroughput(disk.write_bps)}</td>
-                  <td className={utilSeverityClass(disk.util_percent)}>
+                  <td className="fw-semibold col-disk-device">
+                    <span className="disk-device-name">{disk.device}</span>
+                  </td>
+                  <td className="col-disk-read">{formatThroughput(disk.read_bps)}</td>
+                  <td className="col-disk-write">{formatThroughput(disk.write_bps)}</td>
+                  <td className={`col-disk-util ${utilSeverityClass(disk.util_percent)}`}>
                     {formatPercent(disk.util_percent)}
                   </td>
-                  <td className="text-body-secondary">{formatNumber(disk.read_iops)}</td>
-                  <td className="text-body-secondary">{formatNumber(disk.write_iops)}</td>
+                  <td className="text-body-secondary col-disk-riops">{formatNumber(disk.read_iops)}</td>
+                  <td className="text-body-secondary col-disk-wiops">{formatNumber(disk.write_iops)}</td>
                 </tr>
               ))}
             </tbody>

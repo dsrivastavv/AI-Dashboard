@@ -939,6 +939,45 @@ button,a,[role="button"],input,select,textarea,label{touch-action:manipulation}
 .dashboard-table .small{font-size:.8rem;color:var(--text-secondary)}
 .dashboard-table .text-body-secondary{color:var(--text-secondary)!important}
 
+.dashboard-table--gpu-stable,
+.dashboard-table--disk-stable {
+  table-layout: fixed;
+}
+
+.dashboard-table--gpu-stable col.col-gpu-index { width: 7%; }
+.dashboard-table--gpu-stable col.col-gpu-name { width: 33%; }
+.dashboard-table--gpu-stable col.col-gpu-util { width: 10%; }
+.dashboard-table--gpu-stable col.col-gpu-mem { width: 22%; }
+.dashboard-table--gpu-stable col.col-gpu-temp { width: 10%; }
+.dashboard-table--gpu-stable col.col-gpu-power { width: 18%; }
+
+.dashboard-table--disk-stable col.col-disk-device { width: 28%; }
+.dashboard-table--disk-stable col.col-disk-read { width: 16%; }
+.dashboard-table--disk-stable col.col-disk-write { width: 16%; }
+.dashboard-table--disk-stable col.col-disk-util { width: 10%; }
+.dashboard-table--disk-stable col.col-disk-riops { width: 15%; }
+.dashboard-table--disk-stable col.col-disk-wiops { width: 15%; }
+
+.dashboard-table--gpu-stable :is(.col-gpu-util,.col-gpu-mem,.col-gpu-temp,.col-gpu-power),
+.dashboard-table--disk-stable :is(.col-disk-read,.col-disk-write,.col-disk-util,.col-disk-riops,.col-disk-wiops) {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-table--gpu-stable tbody :is(.col-gpu-util,.col-gpu-mem,.col-gpu-temp,.col-gpu-power),
+.dashboard-table--disk-stable tbody :is(.col-disk-read,.col-disk-write,.col-disk-util,.col-disk-riops,.col-disk-wiops) {
+  font-family: var(--font-mono);
+}
+
+.dashboard-table--gpu-stable .col-gpu-name :is(.fw-semibold,.small),
+.dashboard-table--disk-stable tbody .col-disk-device .disk-device-name {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Entity-scoped table hover accent */
 .entity-panel--cpu     { --tbl-accent: var(--entity-cpu); }
 .entity-panel--memory  { --tbl-accent: var(--entity-memory); }
