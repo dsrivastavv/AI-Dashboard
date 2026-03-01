@@ -120,7 +120,8 @@ export default function HistoryCharts({
   }
 
   const isDark = themeMode === 'dark';
-  const { gridStroke, axisStroke, axisColor } = CHART_COLORS[isDark ? 'dark' : 'light'];
+  const { gridStroke, axisStroke, axisColor, tooltipBg, tooltipBorder, tooltipColor } = CHART_COLORS[isDark ? 'dark' : 'light'];
+  const tooltipContentStyle = { background: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: '6px', fontSize: '12px', color: tooltipColor };
   const systemWindowStartMs = historyWindowEndMs - systemMinutes * 60 * 1000;
   const ioWindowStartMs = historyWindowEndMs - ioMinutes * 60 * 1000;
   const systemPoints = useMemo(
@@ -212,13 +213,7 @@ export default function HistoryCharts({
                 <Tooltip
                   labelFormatter={(label) => tooltipLabel(label as number | string)}
                   formatter={(value: unknown, name: unknown) => [formatPercent(Number(value)), String(name)]}
-                  contentStyle={{
-                    background: isDark ? '#1c2a42' : '#fff',
-                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'}`,
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    color: isDark ? '#e0e8f4' : '#1a2438',
-                  }}
+                  contentStyle={tooltipContentStyle}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
                 <Line
@@ -320,13 +315,7 @@ export default function HistoryCharts({
                       }
                       return [formatThroughput(numericValue), seriesName];
                     }}
-                    contentStyle={{
-                      background: isDark ? '#1c2a42' : '#fff',
-                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'}`,
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      color: isDark ? '#e0e8f4' : '#1a2438',
-                    }}
+                    contentStyle={tooltipContentStyle}
                   />
                   <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
                   <Line

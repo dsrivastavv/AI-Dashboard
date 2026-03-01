@@ -6,6 +6,8 @@ import LoginPage from '../pages/LoginPage';
 import NotificationsPage from '../pages/NotificationsPage';
 import SystemInfoPage from '../pages/SystemInfoPage';
 import TerminalPage from '../pages/TerminalPage';
+import PrivacyPage from '../pages/PrivacyPage';
+import TermsPage from '../pages/TermsPage';
 
 export const router = createBrowserRouter([
   {
@@ -16,6 +18,8 @@ export const router = createBrowserRouter([
     path: '/login',
     element: <LoginPage />,
   },
+  { path: '/privacy', element: <PrivacyPage /> },
+  { path: '/terms', element: <TermsPage /> },
   {
     element: <AppLayout />,
     children: [
