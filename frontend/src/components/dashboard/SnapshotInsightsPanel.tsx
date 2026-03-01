@@ -61,7 +61,7 @@ export default function SnapshotInsightsPanel({ snapshot }: SnapshotInsightsPane
             </h2>
             <div className="small panel-caption">Latest sample — operational context</div>
           </div>
-          <span className={`snapshot-bottleneck-pill snapshot-bottleneck-pill--${bottleneckEntity}`}>
+          <span className={`chip entity--${bottleneckEntity} entity-chip snapshot-bottleneck-pill`}>
             {bottleneckTitle}
           </span>
         </div>

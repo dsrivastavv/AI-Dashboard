@@ -44,7 +44,7 @@ export default function BottleneckPanel({ bottleneck }: BottleneckPanelProps) {
         </h2>
 
         <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
-          <span className={`bottleneck-badge bottleneck-badge--${entity}`}>
+          <span className={`chip entity--${entity} entity-chip bottleneck-badge`}>
             <span aria-hidden="true">{icon}</span>
             {bottleneck.title || formatLabel(bottleneck.label)}
           </span>

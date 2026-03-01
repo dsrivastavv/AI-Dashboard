@@ -357,7 +357,11 @@ export default function LoginCard({
               </form>
             )}
 
-            <p className="aid-note">{AUTH_COPY.legalNote}</p>
+            <p className="aid-note">
+              {AUTH_COPY.legalNote}{' '}
+              <a className="aid-link-inline" href="/privacy">Privacy Policy</a>{' · '}
+              <a className="aid-link-inline" href="/terms">Terms</a>
+            </p>
 
           </div>
         </div>
