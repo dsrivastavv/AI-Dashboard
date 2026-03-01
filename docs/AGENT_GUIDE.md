@@ -8,7 +8,7 @@ This guide covers installing and running the monitoring agent on Linux and macOS
 - Sends them to the central webapp ingest API
 - Does not require Django on the monitored server
 
-The agent package lives in `agent_service/` and installs a CLI:
+The agent package lives in `agent/` and installs a CLI:
 
 - `ai-dashboard-agent`
 
@@ -19,7 +19,7 @@ The agent package lives in `agent_service/` and installs a CLI:
 Linux:
 
 ```bash
-cd agent_service
+cd agent
 ./build-deb.sh
 sudo apt install ../ai-dashboard-agent_*_all.deb
 sudo AI_DASHBOARD_HOST=https://dash.example.com \
@@ -31,7 +31,7 @@ sudo AI_DASHBOARD_HOST=https://dash.example.com \
 macOS:
 
 ```bash
-cd agent_service
+cd agent
 conda env create -f environment.yml
 conda activate ai-dashboard-agent
 sudo AI_DASHBOARD_PYTHON="$(which python3)" \
@@ -66,7 +66,7 @@ apt install ./ai-dashboard-agent_*_all.deb
 ### Option B (Linux): Build and Install Debian Package From This Repository
 
 ```bash
-cd agent_service
+cd agent
 ./build-deb.sh
 
 # regular account
@@ -79,7 +79,7 @@ apt install ../ai-dashboard-agent_*_all.deb
 ### Option C (macOS or Linux): Run From Source Without pip Install
 
 ```bash
-cd agent_service
+cd agent
 conda env create -f environment.yml
 conda activate ai-dashboard-agent
 chmod +x ./run-agent.sh

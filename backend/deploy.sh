@@ -3,8 +3,8 @@
 # deploy.sh – Build and collect all assets for production deployment.
 #
 # Usage:
-#   ./deploy.sh           # full build
-#   ./deploy.sh --no-npm  # skip frontend build (backend only)
+#   ./backend/deploy.sh           # full build
+#   ./backend/deploy.sh --no-npm  # skip frontend build (backend only)
 #
 # Expects:
 #   - Conda installed and `conda activate ai-dashboard` already active,
@@ -19,10 +19,12 @@ for arg in "$@"; do
   [[ "$arg" == "--no-npm" ]] && SKIP_NPM=true
 done
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$BACKEND_DIR/.." && pwd)"
 
 echo "==> AI Dashboard – Production Build"
-echo "    Root: $ROOT_DIR"
+echo "    Backend: $BACKEND_DIR"
+echo "    Repo: $REPO_DIR"
 
 # ── 1. Ensure we are inside the correct conda environment ────────────────────
 if [[ "${CONDA_DEFAULT_ENV:-}" != "ai-dashboard" ]]; then
@@ -35,15 +37,15 @@ echo "    Python: $(python --version)  (env: ${CONDA_DEFAULT_ENV})"
 
 # ── 2. Install/upgrade Python dependencies ───────────────────────────────────
 echo "==> Installing Python dependencies..."
-conda env update --file "$ROOT_DIR/environment.yml" --prune -q
+conda env update --file "$BACKEND_DIR/environment.yml" --prune -q
 
 # ── 3. Build React frontend ───────────────────────────────────────────────────
 if [[ "$SKIP_NPM" == "false" ]]; then
   echo "==> Building React frontend..."
-  cd "$ROOT_DIR/frontend"
+  cd "$REPO_DIR/frontend"
   npm ci --silent
   npm run build
-  cd "$ROOT_DIR"
+  cd "$REPO_DIR"
   echo "    Frontend built to frontend/dist/"
 else
   echo "==> Skipping frontend build (--no-npm)"
@@ -51,13 +53,13 @@ fi
 
 # ── 4. Django: run migrations ────────────────────────────────────────────────
 echo "==> Running Django migrations..."
-python "$ROOT_DIR/manage.py" migrate --noinput
+python "$BACKEND_DIR/manage.py" migrate --noinput
 
 # ── 5. Django: collect static files ─────────────────────────────────────────
 echo "==> Collecting static files..."
-python "$ROOT_DIR/manage.py" collectstatic --noinput --clear
+python "$BACKEND_DIR/manage.py" collectstatic --noinput --clear
 
 echo ""
 echo "✓ Build complete. Start the server with:"
-echo "  gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+echo "  gunicorn --chdir backend config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
 echo "  (or: honcho start / heroku local)"

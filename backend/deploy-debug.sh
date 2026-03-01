@@ -4,22 +4,23 @@
 # for local debugging. Assumes Python deps are installed and Node is available.
 #
 # Usage:
-#   ./deploy-debug.sh                 # run migrations, start backend + frontend
-#   BACKEND_PORT=9000 ./deploy-debug.sh
-#   SKIP_MIGRATIONS=1 ./deploy-debug.sh
+#   ./backend/deploy-debug.sh                 # run migrations, start backend + frontend
+#   BACKEND_PORT=9000 ./backend/deploy-debug.sh
+#   SKIP_MIGRATIONS=1 ./backend/deploy-debug.sh
 #
 # Stops both processes when you Ctrl+C or the script exits.
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FRONT_DIR="$ROOT_DIR/frontend"
+BACKEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$BACKEND_DIR/.." && pwd)"
+FRONT_DIR="$REPO_DIR/frontend"
 
 # Load .env if present (optional)
-if [[ -f "$ROOT_DIR/.env" ]]; then
+if [[ -f "$REPO_DIR/.env" ]]; then
   set -a
   # shellcheck disable=SC1091
-  source "$ROOT_DIR/.env"
+  source "$REPO_DIR/.env"
   set +a
 fi
 
@@ -48,14 +49,14 @@ echo "    Frontend: ${FRONTEND_APP_URL} (Vite dev server)"
 # ── Migrations (optional) ───────────────────────────────────────────────────
 if [[ "$SKIP_MIGRATIONS" != "1" ]]; then
   echo "==> Running Django migrations..."
-  (cd "$ROOT_DIR" && python manage.py migrate)
+  (cd "$BACKEND_DIR" && python manage.py migrate)
 else
   echo "==> Skipping migrations (SKIP_MIGRATIONS=1)"
 fi
 
 # ── Start backend ───────────────────────────────────────────────────────────
 echo "==> Starting Django runserver..."
-(cd "$ROOT_DIR" && python manage.py runserver "${BACKEND_HOST}:${BACKEND_PORT}") &
+(cd "$BACKEND_DIR" && python manage.py runserver "${BACKEND_HOST}:${BACKEND_PORT}") &
 BACK_PID=$!
 
 # ── Start frontend ─────────────────────────────────────────────────────────-

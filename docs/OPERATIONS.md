@@ -2,6 +2,8 @@
 
 This document focuses on day-2 operations after initial deployment.
 
+All Django/backend commands in this doc should be run from `backend/` unless noted otherwise.
+
 ## Routine Operations
 
 ## Register a New Server

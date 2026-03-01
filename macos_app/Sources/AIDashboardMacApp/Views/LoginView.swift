@@ -1,5 +1,8 @@
 import SwiftUI
 
+// Shared copy source-of-truth: ../../../../globals/app_text.yml
+// Keep this view text aligned with that root-level file.
+
 private enum AuthMode {
     case signin
     case register

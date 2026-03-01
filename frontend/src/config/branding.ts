@@ -1,5 +1,6 @@
 // Centralized product branding strings used across the UI.
-// Edit here to update copy without touching individual components.
+// Source-of-truth for shared copy lives at repo root: globals/app_text.yml.
+// Keep this file aligned with that root-level shared copy file.
 import { ENTITY_COLORS } from './colors';
 
 export const PRODUCT_NAME = 'AI Dashboard';

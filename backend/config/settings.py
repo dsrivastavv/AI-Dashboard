@@ -5,6 +5,7 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = BASE_DIR.parent
 
 # ── Environment / Modes ─────────────────────────────────────────────────────
 ENV = os.environ.get("DJANGO_ENV", "debug").strip().lower()
@@ -134,7 +135,7 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Include the built React frontend if it exists (after `npm run build`)
-_FRONTEND_DIST = BASE_DIR / 'frontend' / 'dist'
+_FRONTEND_DIST = REPO_ROOT / 'frontend' / 'dist'
 if _FRONTEND_DIST.exists():
     STATICFILES_DIRS = [BASE_DIR / 'static', _FRONTEND_DIST]
 

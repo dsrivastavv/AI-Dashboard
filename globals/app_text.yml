@@ -1,0 +1,24 @@
+product:
+  name: "AI Dashboard"
+  tagline: "Operate AI infrastructure with clarity, speed, and confidence."
+  login_kicker: "AI Infrastructure Platform"
+  default_server_name: "Operations Center"
+  legal_last_updated: "2026-02-28"
+
+login:
+  hero_heading: "Operate your cluster. In real time."
+  hero_subheading: "Gain instant visibility into GPU, CPU, memory, and disk across every node from a single unified control plane."
+
+features:
+  - title: "Remote terminal"
+    description: "Run commands on any node directly from the dashboard."
+  - title: "Multi-cluster control"
+    description: "Monitor distributed clusters from one unified interface."
+  - title: "Bottleneck intelligence"
+    description: "Pinpoint the resource limiting system performance."
+  - title: "Intelligent alerts"
+    description: "Proactive alerts for thermal limits and saturation."
+
+notes:
+  - "This file is the root source-of-truth for app copy shared across backend/frontend/macos/agent docs."
+  - "App-specific constants should stay aligned with this file."

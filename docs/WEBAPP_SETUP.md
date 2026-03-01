@@ -8,6 +8,8 @@ This guide covers setting up the Django webapp that:
 
 The dashboard frontend is now the React app in `frontend/` (Vite + Bootstrap).
 
+All Django/backend commands in this doc should be run from `backend/` unless noted otherwise.
+
 ## Prerequisites
 
 - Python 3.10+ (tested with Python 3.13)

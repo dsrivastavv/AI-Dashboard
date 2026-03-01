@@ -9,6 +9,7 @@ envs/
 .conda/
 .env
 staticfiles/
+backend/staticfiles/
 .pytest_cache/
 .mypy_cache/
 *.egg-info/

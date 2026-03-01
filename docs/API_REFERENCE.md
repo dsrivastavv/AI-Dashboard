@@ -2,6 +2,8 @@
 
 This document describes the dashboard JSON APIs and the remote ingest API.
 
+Any `manage.py` examples in this doc are run from `backend/`.
+
 ## Auth Modes
 
 There are two independent authentication mechanisms:
@@ -304,4 +306,3 @@ python3 manage.py register_server gpu-box-01 --rotate-token
 ```
 
 The plaintext token is only printed at creation/rotation time.
-

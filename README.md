@@ -1,70 +1,44 @@
-# AI Workload Dashboard
+# AI Dashboard Monorepo
 
-Multi-server AI training system health dashboard with:
+This repository is now organized by app boundary:
 
-- central Django webapp (API + auth + storage)
-- apt-installable agent for each monitored server
-- React frontend (`frontend/`) built with Vite + Bootstrap
-- Google login with allowlisted users
-- per-server CPU / GPU / memory / disk / network telemetry
-- bottleneck heuristics and time-series charts
+- `backend/` -> Django API + auth + storage
+- `frontend/` -> React/Vite web dashboard
+- `macos_app/` -> native SwiftUI macOS client
+- `agent/` -> remote monitoring agent package/service
+- `globals/` -> shared, root-level cross-app copy/constants (`globals/app_text.yml`)
+- `docs/` -> architecture + operations documentation
 
-## Documentation
+## Shared Globals
 
-- `docs/README.md` (documentation index)
-- `docs/ARCHITECTURE.md`
-- `docs/WEBAPP_SETUP.md`
-- `docs/AGENT_GUIDE.md`
-- `docs/API_REFERENCE.md`
-- `docs/OPERATIONS.md`
+Use `globals/app_text.yml` as the root source-of-truth for product/app copy that should stay consistent across web, macOS, backend legal pages, and docs.
 
-## Quick Start (Django Backend + React Frontend)
+## Build / Run Each Project
 
-### Choose a mode
-
-- Development (default): `DJANGO_ENV=debug` (enables Django debug, relaxed cookies)
-- Production: `DJANGO_ENV=production` (requires `DJANGO_SECRET_KEY`, enables secure cookies/redirects/HSTS)
-
-### Fast debug start (end-to-end)
+## 1) Backend (Django)
 
 ```bash
-# one-time: conda env
+cd backend
+
+# one-time env
 conda env create -f environment.yml
 conda activate ai-dashboard
+pip install -r requirements.txt
 
-# load local creds (created by us):
-cp .env.example .env   # if you need a template
-source .env
-
-# run full stack (Django + Vite dev server)
-./deploy-debug.sh
-
-# open
-open http://127.0.0.1:3000/dashboard
-```
-
-`deploy-debug.sh` will run migrations (unless `SKIP_MIGRATIONS=1`), start `manage.py runserver` on `BACKEND_PORT` (default 8000) and Vite on port 3000. Stop with Ctrl+C.
-
-## 1. Start the Django Backend (Central Host)
-
-```bash
-conda env create -f environment.yml
-conda activate ai-dashboard
-
-export DJANGO_ENV=debug  # or production
-export DJANGO_SECRET_KEY='replace-me-in-production'
-export GOOGLE_CLIENT_ID='YOUR_GOOGLE_WEB_APP_CLIENT_ID'
-export GOOGLE_CLIENT_SECRET='YOUR_GOOGLE_WEB_APP_CLIENT_SECRET'
-export GOOGLE_ALLOWED_EMAILS='you@gmail.com'
-export FRONTEND_APP_URL='http://127.0.0.1:3000'
-export VITE_LOG_LEVEL='debug'  # frontend console logs (debug/info/warn/error)
-export AI_DASHBOARD_LOG_LEVEL='info'  # agent logs (set DEBUG to troubleshoot)
-
+# run
 python manage.py migrate
 python manage.py runserver 0.0.0.0:8000
 ```
 
-## 2. Start the React Frontend (Vite + Bootstrap)
+### Full-stack debug launcher (backend + frontend)
+
+From repo root:
+
+```bash
+./backend/deploy-debug.sh
+```
+
+## 2) Frontend (React + Vite)
 
 ```bash
 cd frontend
@@ -72,108 +46,46 @@ corepack npm install
 corepack npm run dev
 ```
 
-Notes:
+Open: `http://127.0.0.1:3000/dashboard`
 
-- The React app is configured with a Vite proxy to `http://127.0.0.1:8000`
-- Open `http://127.0.0.1:3000/dashboard`
-- Add Google OAuth callback URI for React dev proxy:
-  - `http://127.0.0.1:3000/accounts/google/login/callback/`
-  - `http://localhost:3000/accounts/google/login/callback/`
-- Django is backend-only; OAuth success/deny redirects are sent back to `FRONTEND_APP_URL`
+## 3) Agent
 
-## 3. Register a Monitored Server (Generates Ingest Token)
+Linux package flow:
 
 ```bash
-python3 manage.py register_server gpu-box-01 --name "GPU Box 01"
-```
-
-Save the printed `INGEST_TOKEN`.
-
-## 4. Install and Run the Agent on the Remote Server
-
-Linux (`apt`) path:
-
-```bash
-cd agent_service
+cd agent
 ./build-deb.sh
 sudo apt install ../ai-dashboard-agent_*_all.deb
-
-# installs config + enables service auto-start on boot
-sudo AI_DASHBOARD_HOST=http://<webapp-host>:8000 \
-     AI_DASHBOARD_USERNAME='<DASHBOARD_USERNAME>' \
-     AI_DASHBOARD_PASSWORD='<DASHBOARD_PASSWORD>' \
-     bash ./install.sh
 ```
 
-macOS (or Linux without package install):
+Source/macOS flow:
 
 ```bash
-cd agent_service
+cd agent
 conda env create -f environment.yml
 conda activate ai-dashboard-agent
-
-# installs config + enables launchd auto-start on boot
-sudo AI_DASHBOARD_PYTHON="$(which python3)" \
-     AI_DASHBOARD_HOST=http://<webapp-host>:8000 \
-     AI_DASHBOARD_USERNAME='<DASHBOARD_USERNAME>' \
-     AI_DASHBOARD_PASSWORD='<DASHBOARD_PASSWORD>' \
-     bash ./install.sh
+./run-agent.sh --help
 ```
 
-## 5. Open the Dashboard
-
-- `http://127.0.0.1:3000/dashboard` (React frontend)
-- Sign in with an allowlisted Google account
-- Select a server from the dropdown
-
-## Optional: Local Collector (Single-Host Mode)
-
-You can still collect metrics directly on the Django host (backend machine):
+## 4) macOS App (SwiftUI)
 
 ```bash
-python3 manage.py collect_metrics --interval 2
+cd macos_app
 ```
 
-This stores metrics under a `local` monitored server entry.
+Open `Package.swift` in Xcode and run the `AIDashboardMacApp` target.
 
-## Common Commands
+## Notes
 
-```bash
-# Create / update conda environments
-conda env create -f environment.yml
-conda env update -f environment.yml --prune
+- Backend env vars can still be loaded from repo-root `.env`.
+- Backend production helper script: `backend/deploy.sh`
+- Backend Procfile: `backend/Procfile`
 
-# Register a server
-python3 manage.py register_server gpu-box-01 --name "GPU Box 01"
+## Documentation
 
-# Rotate a server ingest token
-python3 manage.py register_server gpu-box-01 --rotate-token
-
-# Local one-shot sample (debug)
-python3 manage.py collect_metrics --once
-
-# Agent one-shot send (debug)
-ai-dashboard-agent --host http://127.0.0.1:8000 --server-slug gpu-box-01 --token '...' --once
-```
-
-## Key Features
-
-- Multi-server selector in dashboard UI
-- React + Bootstrap dashboard interface
-- Persistent time-series metrics
-- Per-GPU and per-disk breakdowns
-- GPU/CPU/IO bottleneck heuristics
-- Google OAuth login + allowlist controls
-- Token-authenticated remote ingest API
-
-## Important Notes
-
-- Use `django-allauth[socialaccount]` (already pinned in `requirements.txt`)
-- Configure Google OAuth redirect URI:
-  - `http://127.0.0.1:8000/accounts/google/login/callback/`
-  - `http://localhost:8000/accounts/google/login/callback/`
-- If using the React dev server proxy, also add:
-  - `http://127.0.0.1:3000/accounts/google/login/callback/`
-  - `http://localhost:3000/accounts/google/login/callback/`
-- Do not commit secrets (Google client secret, ingest tokens)
-- Backend root (`http://127.0.0.1:8000/`) returns JSON metadata; Django is backend-only
+- `docs/README.md`
+- `docs/ARCHITECTURE.md`
+- `docs/WEBAPP_SETUP.md`
+- `docs/AGENT_GUIDE.md`
+- `docs/API_REFERENCE.md`
+- `docs/OPERATIONS.md`

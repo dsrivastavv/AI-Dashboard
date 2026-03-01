@@ -14,7 +14,7 @@ Linux only:
 Build from this repository:
 
 ```bash
-cd agent_service
+cd agent
 ./build-deb.sh
 ```
 
@@ -45,7 +45,7 @@ Use a Python environment with dependencies installed (for example Conda using
 `environment.yml`), then run directly from source:
 
 ```bash
-cd agent_service
+cd agent
 conda env create -f environment.yml
 conda activate ai-dashboard-agent
 chmod +x ./run-agent.sh
@@ -58,7 +58,7 @@ fallback for GPU metrics.
 ## macOS service (auto-start on boot)
 
 ```bash
-cd agent_service
+cd agent
 conda env create -f environment.yml
 conda activate ai-dashboard-agent
 

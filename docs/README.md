@@ -1,10 +1,16 @@
 # Documentation Index
 
-This project has two deployable parts:
+This project has four deployable parts:
 
 1. `Webapp Backend` (Django): auth + ingest API + storage
 2. `Agent` (apt-installable): runs on each monitored server and sends metrics to the webapp
 3. `Frontend UI` (React + Bootstrap in `frontend/`): dashboard experience that consumes the Django APIs
+
+Repository layout:
+- Backend: `backend/`
+- Frontend: `frontend/`
+- Agent: `agent/`
+- macOS app: `macos_app/`
 
 ## Read This First
 

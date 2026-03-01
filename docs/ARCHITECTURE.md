@@ -1,5 +1,7 @@
 # Architecture
 
+Backend command examples assume you are in `backend/`.
+
 ## Overview
 
 The system is split into:
