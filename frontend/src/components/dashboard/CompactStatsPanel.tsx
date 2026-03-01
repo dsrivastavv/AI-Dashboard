@@ -46,14 +46,14 @@ export default function CompactStatsPanel({ snapshot }: CompactStatsPanelProps) 
 
   return (
     <div className="compact-stats-stack">
-      <div className="card shadow-sm border-0 panel-card compact-stats-panel">
-        <div className="card-body p-3 d-flex flex-column gap-3">
-          <div className="d-flex justify-content-between align-items-center">
-            <h2 className="h6 mb-0 panel-title">Statistics</h2>
-            <button type="button" className="btn btn-sm radar-panel-menu" aria-label="Panel menu">
-              ...
-            </button>
+      <div className="panel-card compact-stats-panel">
+        <div className="panel-head">
+          <div>
+            <h2 className="panel-title">Statistics</h2>
+            <span className="panel-caption">Current resource readings</span>
           </div>
+        </div>
+        <div className="card-body d-flex flex-column gap-3">
 
           <RingCard
             label="CPU Load"

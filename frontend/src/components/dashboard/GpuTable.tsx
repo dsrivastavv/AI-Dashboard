@@ -15,36 +15,43 @@ export default function GpuTable({ gpus }: GpuTableProps) {
   }
 
   return (
-    <div className="card shadow-sm border-0 h-100 panel-card table-panel entity-panel entity-panel--gpu">
-      <div className="card-body p-0">
-        <div className="px-4 py-3 border-bottom table-panel-head">
-          <h2 className="h6 mb-0 panel-title d-flex align-items-center gap-2">
-            <span className="entity-dot entity-dot--gpu" aria-hidden="true" />
-            GPU Devices
-          </h2>
-        </div>
-        <div className="table-responsive">
-          <table className="table table-sm align-middle mb-0 dashboard-table">
+    <div className="panel-card table-panel entity-panel entity-panel--gpu h-100">
+      <div className="table-panel-head">
+        <h2 className="panel-title d-flex align-items-center gap-2">
+          <span className="entity-dot entity-dot--gpu" aria-hidden="true" />
+          GPU Devices
+        </h2>
+      </div>
+      <div className="table-responsive">
+          <table className="dashboard-table dashboard-table--gpu-stable">
+            <colgroup>
+              <col className="col-gpu-index" />
+              <col className="col-gpu-name" />
+              <col className="col-gpu-util" />
+              <col className="col-gpu-mem" />
+              <col className="col-gpu-temp" />
+              <col className="col-gpu-power" />
+            </colgroup>
             <thead>
               <tr>
-                <th scope="col">#</th>
-                <th scope="col">Name</th>
-                <th scope="col">
+                <th scope="col" className="col-gpu-index">#</th>
+                <th scope="col" className="col-gpu-name">Name</th>
+                <th scope="col" className="col-gpu-util">
                   <span className="th-icon-label">
                     <Zap size={12} aria-hidden="true" /> Util
                   </span>
                 </th>
-                <th scope="col">
+                <th scope="col" className="col-gpu-mem">
                   <span className="th-icon-label">
                     <Database size={12} aria-hidden="true" /> Mem
                   </span>
                 </th>
-                <th scope="col">
+                <th scope="col" className="col-gpu-temp">
                   <span className="th-icon-label">
                     <Thermometer size={12} aria-hidden="true" /> Temp
                   </span>
                 </th>
-                <th scope="col">
+                <th scope="col" className="col-gpu-power">
                   <span className="th-icon-label">
                     <Plug size={12} aria-hidden="true" /> Power
                   </span>
@@ -54,15 +61,15 @@ export default function GpuTable({ gpus }: GpuTableProps) {
             <tbody>
               {gpus.map((gpu) => (
                 <tr key={`${gpu.gpu_index}-${gpu.uuid || gpu.name}`}>
-                  <td className="text-body-secondary">{gpu.gpu_index}</td>
-                  <td>
+                  <td className="text-body-secondary col-gpu-index">{gpu.gpu_index}</td>
+                  <td className="col-gpu-name">
                     <div className="fw-semibold">{gpu.name || `GPU ${gpu.gpu_index}`}</div>
                     <div className="small text-body-secondary">{gpu.uuid || 'No UUID'}</div>
                   </td>
-                  <td className={utilSeverityClass(gpu.utilization_gpu_percent)}>
+                  <td className={`col-gpu-util ${utilSeverityClass(gpu.utilization_gpu_percent)}`}>
                     {formatPercent(gpu.utilization_gpu_percent)}
                   </td>
-                  <td>
+                  <td className="col-gpu-mem">
                     <div className={utilSeverityClass(gpu.memory_percent)}>
                       {formatPercent(gpu.memory_percent)}
                     </div>
@@ -70,10 +77,10 @@ export default function GpuTable({ gpus }: GpuTableProps) {
                       {formatBytes(gpu.memory_used_bytes)} / {formatBytes(gpu.memory_total_bytes)}
                     </div>
                   </td>
-                  <td className={tempSeverityClass(gpu.temperature_c)}>
+                  <td className={`col-gpu-temp ${tempSeverityClass(gpu.temperature_c)}`}>
                     {gpu.temperature_c == null ? '—' : `${formatNumber(gpu.temperature_c)}°C`}
                   </td>
-                  <td>
+                  <td className="col-gpu-power">
                     {gpu.power_w == null
                       ? '—'
                       : `${formatNumber(gpu.power_w)} W${gpu.power_limit_w == null ? '' : ` / ${formatNumber(gpu.power_limit_w)} W`}`}
@@ -82,7 +89,6 @@ export default function GpuTable({ gpus }: GpuTableProps) {
               ))}
             </tbody>
           </table>
-        </div>
       </div>
     </div>
   );

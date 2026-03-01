@@ -85,30 +85,32 @@ export const MARKETING_COPY = {
 
 // ── Login page — right-panel feature highlights ──────────────────────────────
 
+export type LoginFeatureIcon = 'telemetry' | 'cluster' | 'bottleneck' | 'alerts';
+
 export const LOGIN_FEATURES: ReadonlyArray<{
-  gif: string;
+  icon: LoginFeatureIcon;
   title: string;
   desc: string;
 }> = [
   {
-    gif:   '/gif/lightning.gif',
+    icon:  'telemetry',
     title: 'Live telemetry',
-    desc:  'Second-by-second insight into GPU, CPU, memory, and disk.',
+    desc:  'Second-by-second insight across GPU, CPU, memory, and disk.',
   },
   {
-    gif:   '/gif/desktop.gif',
+    icon:  'cluster',
     title: 'Multi-cluster control',
-    desc:  'Monitor and manage distributed training infrastructure from a single interface.',
+    desc:  'Monitor distributed training clusters from one unified interface.',
   },
   {
-    gif:   '/gif/brain.gif',
+    icon:  'bottleneck',
     title: 'Bottleneck intelligence',
-    desc:  'Instantly identify the resource constraining performance.',
+    desc:  'Quickly identify the resource limiting system performance.',
   },
   {
-    gif:   '/gif/bell.gif',
+    icon:  'alerts',
     title: 'Intelligent alerts',
-    desc:  'Proactive notifications for thermal limits and resource saturation.',
+    desc:  'Proactive alerts for thermal limits and resource saturation.',
   },
 ];
 

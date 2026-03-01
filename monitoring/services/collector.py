@@ -4,6 +4,7 @@ import os
 import re
 import socket
 import subprocess
+import getpass
 import warnings
 from datetime import datetime, timedelta
 from typing import Any
@@ -19,6 +20,13 @@ from monitoring.services.notifications import create_notification
 
 
 PHYSICAL_DISK_RE = re.compile(r"^(nvme\d+n\d+|sd[a-z]+|vd[a-z]+|xvd[a-z]+|md\d+)$")
+
+
+def _current_user_name() -> str:
+    try:
+        return getpass.getuser()
+    except Exception:
+        return ""
 
 
 def _to_float(value: Any) -> float | None:
@@ -861,15 +869,21 @@ def _update_server_heartbeat(
         updates.append("last_ip")
     if agent_info:
         hostname = str(agent_info.get("hostname", "") or "")[:255]
+        agent_user = MonitoredServer.normalize_agent_user(str(agent_info.get("user", "") or ""))
         agent_version = str(agent_info.get("version", "") or "")[:64]
         if hostname and server.hostname != hostname:
             server.hostname = hostname
             updates.append("hostname")
+        if agent_user and server.agent_user != agent_user:
+            server.agent_user = agent_user
+            updates.append("agent_user")
         if agent_version and server.last_agent_version != agent_version:
             server.last_agent_version = agent_version
             updates.append("last_agent_version")
         # Keep a compact copy of agent metadata for troubleshooting.
         sanitized = {str(k)[:64]: agent_info[k] for k in list(agent_info.keys())[:25]}
+        if "user" in sanitized:
+            sanitized["user"] = MonitoredServer.normalize_agent_user(str(sanitized.get("user", "") or ""))
         if sanitized != (server.agent_info or {}):
             server.agent_info = sanitized
             updates.append("agent_info")
@@ -919,6 +933,10 @@ def collect_and_store(
     _update_server_heartbeat(
         target_server,
         collected_at=snapshot.collected_at,
-        agent_info={"hostname": socket.gethostname(), "version": "django-local-collector"},
+        agent_info={
+            "hostname": socket.gethostname(),
+            "user": _current_user_name(),
+            "version": "django-local-collector",
+        },
     )
     return snapshot

@@ -40,6 +40,7 @@ def enroll(
     password: str,
     machine_id: str,
     hostname: str,
+    agent_user: str = "",
     platform_info: str = "",
     agent_version: str = "",
     timeout: float = 10.0,
@@ -61,6 +62,7 @@ def enroll(
         "password": password,
         "machine_id": machine_id,
         "hostname": hostname,
+        "agent_user": agent_user,
         "platform": platform_info,
         "agent_version": agent_version,
     }

@@ -24,6 +24,7 @@ class MonitoredServer(models.Model):
     # Stable machine identifier (from /etc/machine-id on Linux) used to
     # deduplicate servers across agent re-installs on the same machine.
     machine_id = models.CharField(max_length=128, blank=True, null=True, unique=True, db_index=True)
+    agent_user = models.CharField(max_length=128, blank=True, default="")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -63,6 +64,15 @@ class MonitoredServer(models.Model):
         return f"{self.api_token_hash[:8]}..." if self.api_token_hash else ""
 
     @classmethod
+    def normalize_agent_user(cls, agent_user: str) -> str:
+        normalized = (agent_user or "").strip()
+        if not normalized:
+            return ""
+        if normalized.casefold() == "root":
+            return "Administrator"
+        return normalized[:128]
+
+    @classmethod
     def ensure_local_server(
         cls, *, slug: str = "local", name: str = "Local Host", hostname: str = ""
     ) -> "MonitoredServer":
@@ -95,6 +105,7 @@ class MonitoredServer(models.Model):
         *,
         machine_id: str,
         hostname: str,
+        agent_user: str = "",
         platform_info: str = "",
         agent_version: str = "",
         source_ip: str | None = None,
@@ -110,6 +121,7 @@ class MonitoredServer(models.Model):
 
         new_token = cls.generate_token()
         token_hash = cls.hash_token(new_token)
+        normalized_agent_user = cls.normalize_agent_user(agent_user)
 
         # Build a deterministic slug from the hostname, deduplicated by machine_id.
         base_slug = slugify(hostname or machine_id[:32] or "agent")[:60] or "agent"
@@ -128,6 +140,7 @@ class MonitoredServer(models.Model):
                 slug=slug,
                 name=hostname[:128] or slug,
                 hostname=hostname[:255],
+                agent_user=normalized_agent_user,
                 api_token_hash=token_hash,
                 is_active=True,
                 last_agent_version=agent_version[:64],
@@ -145,6 +158,9 @@ class MonitoredServer(models.Model):
             if hostname and server.hostname != hostname[:255]:
                 server.hostname = hostname[:255]
                 update_fields.append("hostname")
+            if normalized_agent_user and server.agent_user != normalized_agent_user:
+                server.agent_user = normalized_agent_user
+                update_fields.append("agent_user")
             if not server.is_active:
                 server.is_active = True
                 update_fields.append("is_active")

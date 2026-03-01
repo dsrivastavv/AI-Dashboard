@@ -37,6 +37,7 @@ State (cached slug + token) is written to:
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
 import logging
 import os
@@ -163,8 +164,19 @@ def _print(msg: str, quiet: bool = False) -> None:
         print(msg, flush=True)
 
 
+def _resolve_agent_user() -> str:
+    try:
+        username = getpass.getuser().strip()
+        if username:
+            return username
+    except Exception:
+        pass
+    return "root" if os.getuid() == 0 else ""
+
+
 def _agent_metadata(
     hostname: str,
+    agent_user: str,
     disk_filters: list[str],
     labels: dict[str, str],
 ) -> dict[str, Any]:
@@ -172,6 +184,7 @@ def _agent_metadata(
     return {
         "version": __version__,
         "hostname": hostname,
+        "user": agent_user,
         "platform": platform.platform(),
         "python": platform.python_version(),
         "pid": os.getpid(),
@@ -248,6 +261,7 @@ def _do_enroll(
     password: str,
     machine_id: str,
     hostname: str,
+    agent_user: str,
     verify: bool,
     timeout: float,
     quiet: bool,
@@ -263,6 +277,7 @@ def _do_enroll(
             password=password,
             machine_id=machine_id,
             hostname=hostname,
+            agent_user=agent_user,
             platform_info=platform.platform(),
             agent_version=__version__,
             timeout=timeout,
@@ -313,6 +328,7 @@ def run(args: argparse.Namespace) -> int:  # noqa: C901
     interval     = max(0.5, float(interval))
     disk_filters = _csv_list(disks_raw)
     labels       = _parse_labels(args.label)
+    agent_user   = _resolve_agent_user()
 
     level_name = "WARNING" if args.quiet else log_level.upper()
     logging.basicConfig(level=level_name, format=LOG_FORMAT)
@@ -346,6 +362,7 @@ def run(args: argparse.Namespace) -> int:  # noqa: C901
             password=password,
             machine_id=machine_id,
             hostname=hostname,
+            agent_user=agent_user,
             verify=verify,
             timeout=timeout,
             quiet=args.quiet,
@@ -365,7 +382,7 @@ def run(args: argparse.Namespace) -> int:  # noqa: C901
         _print(f"Tracking disks: {', '.join(disk_filters)}", quiet=args.quiet)
     logger.info("Agent starting interval=%.2fs verify_tls=%s legacy=%s", interval, verify, legacy_mode)
 
-    agent = _agent_metadata(hostname, disk_filters, labels)
+    agent = _agent_metadata(hostname, agent_user, disk_filters, labels)
 
     # Collect + post loop
     while True:
@@ -411,6 +428,7 @@ def run(args: argparse.Namespace) -> int:  # noqa: C901
                     password=password,
                     machine_id=machine_id,
                     hostname=hostname,
+                    agent_user=agent_user,
                     verify=verify,
                     timeout=timeout,
                     quiet=args.quiet,
@@ -421,7 +439,7 @@ def run(args: argparse.Namespace) -> int:  # noqa: C901
                     "ingest_token": ingest_token,
                     "enrolled_at":  time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 })
-                agent = _agent_metadata(hostname, disk_filters, labels)
+                agent = _agent_metadata(hostname, agent_user, disk_filters, labels)
             except SystemExit:
                 return 1
             except Exception as exc:

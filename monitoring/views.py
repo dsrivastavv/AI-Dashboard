@@ -69,11 +69,16 @@ def _server_queryset():
 
 
 def _serialize_server(server: MonitoredServer) -> dict[str, Any]:
+    fallback_user = ""
+    if isinstance(server.agent_info, dict):
+        fallback_user = MonitoredServer.normalize_agent_user(str(server.agent_info.get("user", "") or ""))
+    serialized_agent_user = MonitoredServer.normalize_agent_user(server.agent_user) or fallback_user
     return {
         "id": server.id,
         "slug": server.slug,
         "name": server.name,
         "hostname": server.hostname,
+        "agent_user": serialized_agent_user,
         "description": server.description,
         "is_active": server.is_active,
         "last_seen_at": server.last_seen_at.isoformat() if server.last_seen_at else None,
@@ -670,6 +675,7 @@ def api_agent_enroll(request):
     password = body.get("password") or ""
     machine_id = (body.get("machine_id") or "").strip()
     hostname = (body.get("hostname") or "").strip()
+    agent_user = (body.get("agent_user") or "").strip()
     platform_info = (body.get("platform") or "").strip()
     agent_version = (body.get("agent_version") or "").strip()
 
@@ -700,6 +706,7 @@ def api_agent_enroll(request):
     server, ingest_token = MonitoredServer.enroll_or_update(
         machine_id=machine_id,
         hostname=hostname,
+        agent_user=agent_user,
         platform_info=platform_info,
         agent_version=agent_version,
         source_ip=_request_ip(request),

@@ -224,7 +224,7 @@ export function useDashboardData(options: {
     () => {
       void fetchLatest({ background: true });
     },
-    5000,
+    1000,
     liveRefreshEnabled && !authRequired && !accessDenied,
   );
 
@@ -232,7 +232,7 @@ export function useDashboardData(options: {
     () => {
       void fetchHistory({ background: true });
     },
-    30000,
+    5000,
     liveRefreshEnabled && !authRequired && !accessDenied,
   );
 

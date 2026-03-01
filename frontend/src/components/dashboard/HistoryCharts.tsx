@@ -90,6 +90,29 @@ const animatedLineProps = {
   animationEasing: 'linear' as const,
 };
 
+const GPU_SERIES_COLORS = [
+  '#2a8898', // teal (primary — matches ENTITY_COLORS.gpu)
+  '#3aacbf', // lighter teal
+  '#1e6e7a', // darker teal
+  '#5dc8d8', // sky teal
+  '#157080', // deep teal
+  '#80c8d4', // pale teal
+  '#0e5060', // very dark teal
+  '#22b4a0', // teal-green
+  '#48d4c0', // mint teal
+  '#106858', // forest teal
+  '#70b8c8', // steel teal
+  '#2090b0', // ocean blue-teal
+  '#38c8a8', // seafoam
+  '#185870', // slate teal
+  '#60e0d0', // bright aqua
+  '#0a4050', // midnight teal
+];
+
+function gpuSeriesColor(position: number): string {
+  return GPU_SERIES_COLORS[position % GPU_SERIES_COLORS.length];
+}
+
 export default function HistoryCharts({
   points,
   systemMinutes,
@@ -132,17 +155,42 @@ export default function HistoryCharts({
     () => filterPointsByMinutes(normalizedPoints, ioMinutes, historyWindowEndMs),
     [normalizedPoints, ioMinutes, historyWindowEndMs],
   );
+  const gpuSeriesIndices = useMemo(() => {
+    const indices = new Set<number>();
+    systemPoints.forEach((point) => {
+      point.gpus.forEach((gpu) => {
+        if (gpu.gpu_index >= 0) indices.add(gpu.gpu_index);
+      });
+    });
+    return Array.from(indices).sort((a, b) => a - b);
+  }, [systemPoints]);
+  const systemChartPoints = useMemo(() => {
+    return systemPoints.map((point) => {
+      const gpuUtilByIndex: Record<string, number | null> = {};
+      point.gpus.forEach((gpu) => {
+        gpuUtilByIndex[`gpu_${gpu.gpu_index}_util_percent`] = gpu.utilization_gpu_percent;
+      });
+      return {
+        ...point,
+        ...gpuUtilByIndex,
+      };
+    });
+  }, [systemPoints]);
   const systemPercentMax = useMemo(() => {
     const values: number[] = [];
-    systemPoints.forEach((point) => {
+    systemChartPoints.forEach((point) => {
       if (point.cpu_usage_percent != null) values.push(point.cpu_usage_percent);
       if (point.memory_percent != null) values.push(point.memory_percent);
-      if (point.gpu_top_util_percent != null) values.push(point.gpu_top_util_percent);
+      const pointValues = point as Record<string, unknown>;
+      gpuSeriesIndices.forEach((gpuIndex) => {
+        const gpuValue = pointValues[`gpu_${gpuIndex}_util_percent`];
+        if (typeof gpuValue === 'number') values.push(gpuValue);
+      });
     });
     const maxValue = values.length ? Math.max(...values) : 0;
     const padded = maxValue * 1.08 + 3; // small buffer above observed max
     return Math.min(100, Math.max(10, Math.ceil(padded / 5) * 5));
-  }, [systemPoints]);
+  }, [systemChartPoints, gpuSeriesIndices]);
   const ioPercentMax = useMemo(() => {
     const values: number[] = [];
     ioPoints.forEach((point) => {
@@ -162,9 +210,7 @@ export default function HistoryCharts({
     const padded = maxValue * 1.12 + 10;
     return Math.max(1, Math.ceil(padded));
   }, [ioPoints]);
-  const hasGpuSeries = systemPoints.some(
-    (point) => point.gpu_top_util_percent !== null && point.gpu_top_util_percent !== undefined,
-  );
+  const hasGpuSeries = gpuSeriesIndices.length > 0;
 
   const utilizationChart = (
     <div className="chart-panel chart-panel--system">
@@ -191,7 +237,7 @@ export default function HistoryCharts({
             <div className="chart-empty-state">No samples for this time window.</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={systemPoints} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+              <LineChart data={systemChartPoints} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
                 <XAxis
                   type="number"
@@ -228,14 +274,17 @@ export default function HistoryCharts({
                   name="Memory %"
                   stroke={ENTITY_COLORS.memory}
                 />
-                {hasGpuSeries ? (
-                  <Line
-                    {...animatedLineProps}
-                    dataKey="gpu_top_util_percent"
-                    name="Top GPU %"
-                    stroke={ENTITY_COLORS.gpu}
-                  />
-                ) : null}
+                {hasGpuSeries
+                  ? gpuSeriesIndices.map((gpuIndex, index) => (
+                    <Line
+                      key={`gpu-series-${gpuIndex}`}
+                      {...animatedLineProps}
+                      dataKey={`gpu_${gpuIndex}_util_percent`}
+                      name={`GPU ${gpuIndex} %`}
+                      stroke={gpuSeriesColor(index)}
+                    />
+                  ))
+                  : null}
               </LineChart>
             </ResponsiveContainer>
           )}

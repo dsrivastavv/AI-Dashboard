@@ -47,18 +47,14 @@ export default function ResourceRadarPanel({
   const { gridStroke, axisTickFill, radarStroke, radarFill } = RADAR_COLORS[themeMode];
 
   return (
-    <div className="card shadow-sm border-0 panel-card radar-panel h-100">
-      <div className="card-body p-4">
-        <div className="d-flex justify-content-between align-items-center mb-2">
-          <div>
-            <h2 className="h6 mb-1 panel-title">Resource Profile</h2>
-            <div className="small panel-caption">Current utilization signature</div>
-          </div>
-          <button type="button" className="btn btn-sm radar-panel-menu" aria-label="Panel menu">
-            ...
-          </button>
+    <div className="panel-card radar-panel h-100">
+      <div className="panel-head">
+        <div>
+          <h2 className="panel-title">Resource Profile</h2>
+          <span className="panel-caption">Current utilization signature</span>
         </div>
-
+      </div>
+      <div className="card-body">
         <div className="radar-chart-wrap">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={radarData} outerRadius="72%">

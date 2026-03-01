@@ -45,6 +45,7 @@ export interface AgentSystemInfo {
 export interface AgentInfo {
   version?: string;
   hostname?: string;
+  user?: string;
   platform?: string;
   python?: string;
   pid?: number;
@@ -59,6 +60,7 @@ export interface ServerSummary {
   slug: string;
   name: string;
   hostname: string;
+  agent_user: string;
   description: string;
   is_active: boolean;
   last_seen_at: string | null;

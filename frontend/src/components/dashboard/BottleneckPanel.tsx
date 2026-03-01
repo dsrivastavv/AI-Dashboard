@@ -36,12 +36,14 @@ export default function BottleneckPanel({ bottleneck }: BottleneckPanelProps) {
   const entity = getBottleneckEntity(bottleneck.label);
 
   return (
-    <div className={`card shadow-sm border-0 h-100 panel-card bottleneck-panel bottleneck-panel--${entity}`}>
-      <div className="card-body p-4">
-        <h2 className="h6 mb-3 panel-title">
-          <span className="panel-title-icon"><ScanSearch size={15} aria-hidden="true" /></span>
+    <div className={`panel-card h-100 bottleneck-panel bottleneck-panel--${entity}`}>
+      <div className="panel-head">
+        <h2 className="panel-title d-flex align-items-center gap-2">
+          <ScanSearch size={15} aria-hidden="true" />
           Bottleneck Analysis
         </h2>
+      </div>
+      <div className="card-body">
 
         <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
           <span className={`chip entity--${entity} entity-chip bottleneck-badge`}>

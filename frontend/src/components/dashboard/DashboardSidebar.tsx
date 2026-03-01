@@ -1,9 +1,11 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import BrandName from '../common/BrandName';
 import { PRODUCT_TAGLINE } from '../../config/branding';
 import {
   ArrowLeftRight,
   Bell,
+  ChevronDown,
   Info,
   LogOut,
   Moon,
@@ -46,6 +48,44 @@ export default function DashboardSidebar({
   notifUnreadCount = 0,
 }: DashboardSidebarProps) {
   const { pathname, search } = useLocation();
+  const [isServerMenuOpen, setIsServerMenuOpen] = useState(false);
+  const serverMenuRef = useRef<HTMLDivElement | null>(null);
+  const isServerMenuDisabled = isServerLoading || servers.length === 0;
+  const selectedServer = useMemo(
+    () => servers.find((server) => server.slug === selectedServerSlug) ?? null,
+    [servers, selectedServerSlug],
+  );
+  const serverButtonLabel = selectedServer?.name ?? (servers.length === 0 ? 'No servers' : 'Select server');
+
+  useEffect(() => {
+    if (!isServerMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (target && serverMenuRef.current?.contains(target)) return;
+      setIsServerMenuOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsServerMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown, { passive: true });
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isServerMenuOpen]);
+
+  useEffect(() => {
+    if (isServerMenuDisabled) {
+      setIsServerMenuOpen(false);
+    }
+  }, [isServerMenuDisabled]);
 
   return (
     <>
@@ -76,33 +116,57 @@ export default function DashboardSidebar({
             </button>
           </span>
         </div>
-        <div className="sidebar-server-select-wrap">
-          <select
-            id="sidebar-server-selector"
-            className="sidebar-server-select"
-            value={selectedServerSlug ?? ''}
-            disabled={isServerLoading || servers.length === 0}
-            onChange={(e) => onServerChange(e.target.value || null)}
+        <div className="sidebar-server-controls">
+          <div className="sidebar-server-select-wrap" ref={serverMenuRef}>
+            <button
+              id="sidebar-server-selector"
+              type="button"
+              className={`sidebar-server-trigger${isServerMenuOpen ? ' is-open' : ''}`}
+              aria-haspopup="listbox"
+              aria-expanded={isServerMenuOpen}
+              disabled={isServerMenuDisabled}
+              onClick={() => setIsServerMenuOpen((prev) => !prev)}
+            >
+              <span className="sidebar-server-trigger-text">{serverButtonLabel}</span>
+              <ChevronDown size={14} className="sidebar-server-trigger-caret" aria-hidden="true" />
+            </button>
+            {isServerMenuOpen && !isServerMenuDisabled ? (
+              <div className="sidebar-server-menu" role="listbox" aria-label="Servers">
+                {servers.map((server) => {
+                  const isSelected = server.slug === selectedServerSlug;
+                  return (
+                    <button
+                      key={server.id}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      className={`sidebar-server-option${isSelected ? ' is-selected' : ''}`}
+                      onClick={() => {
+                        onServerChange(server.slug);
+                        setIsServerMenuOpen(false);
+                      }}
+                    >
+                      <span className="sidebar-server-option-name">{server.name}</span>
+                      <span className="sidebar-server-option-slug">{server.slug}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            className="sidebar-refresh-btn sidebar-refresh-btn--icon"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            aria-label={isRefreshing ? 'Refreshing server data' : 'Refresh server data'}
+            title={isRefreshing ? 'Refreshing...' : 'Refresh'}
           >
-            {servers.length === 0 ? <option value="">No servers</option> : null}
-            {servers.map((s) => (
-              <option key={s.id} value={s.slug}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+            {isRefreshing
+              ? <RotateCw size={13} className="sidebar-refresh-spin" aria-hidden="true" />
+              : <RefreshCw size={13} aria-hidden="true" />}
+          </button>
         </div>
-        <button
-          type="button"
-          className="sidebar-refresh-btn"
-          style={{ marginTop: '10px' }}
-          onClick={onRefresh}
-          disabled={isRefreshing}
-        >
-          {isRefreshing
-            ? <><RotateCw size={13} className="sidebar-refresh-spin" aria-hidden="true" /> Refreshing...</>
-            : <><RefreshCw size={13} aria-hidden="true" /> Refresh</>}
-        </button>
       </div>
 
       {/* Navigation tabs */}

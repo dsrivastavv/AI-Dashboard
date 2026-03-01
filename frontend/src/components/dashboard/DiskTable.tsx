@@ -15,16 +15,15 @@ export default function DiskTable({ disks }: DiskTableProps) {
   }
 
   return (
-    <div className="card shadow-sm border-0 h-100 panel-card table-panel entity-panel entity-panel--disk">
-      <div className="card-body p-0">
-        <div className="px-4 py-3 border-bottom table-panel-head">
-          <h2 className="h6 mb-0 panel-title d-flex align-items-center gap-2">
-            <span className="entity-dot entity-dot--disk" aria-hidden="true" />
-            Disk Devices
-          </h2>
-        </div>
-        <div className="table-responsive">
-          <table className="table table-sm align-middle mb-0 dashboard-table">
+    <div className="panel-card table-panel entity-panel entity-panel--disk h-100">
+      <div className="table-panel-head">
+        <h2 className="panel-title d-flex align-items-center gap-2">
+          <span className="entity-dot entity-dot--disk" aria-hidden="true" />
+          Disk Devices
+        </h2>
+      </div>
+      <div className="table-responsive">
+          <table className="dashboard-table">
             <thead>
               <tr>
                 <th scope="col">Device</th>
@@ -62,7 +61,6 @@ export default function DiskTable({ disks }: DiskTableProps) {
               ))}
             </tbody>
           </table>
-        </div>
       </div>
     </div>
   );

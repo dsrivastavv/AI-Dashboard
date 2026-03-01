@@ -199,6 +199,10 @@ export default function SystemInfoPage() {
 
   const uptimeStr = formatUptime(sysInfo.uptime_seconds);
   const agentVersion = server.last_agent_version || (server.agent_info?.version as string | undefined) || '—';
+  const rawAgentUser = server.agent_user || (server.agent_info?.user as string | undefined) || '';
+  const agentUser = rawAgentUser.trim()
+    ? (rawAgentUser.trim().toLowerCase() === 'root' ? 'Administrator' : rawAgentUser.trim())
+    : '—';
 
   return (
     <div className="app-main-inner sysinfo-page">
@@ -220,11 +224,11 @@ export default function SystemInfoPage() {
         </div>
       </div>
 
-      {/* ── Row 1: OS | Hardware | Uptime  (equal height, 3 cols) ── */}
+      {/* ── Cards: OS | Hardware | Uptime | Server Record (2-per-row) ── */}
       <div className="row g-3 align-items-stretch">
 
         {/* Operating System */}
-        <div className="col-12 col-md-6 col-xl-4 d-flex">
+        <div className="col-12 col-md-6 d-flex">
           <SysCard title="Operating System" icon={<Info size={15} />} fill>
             <div className="sysinfo-grid sysinfo-grid--fill">
               <InfoRow label="OS" value={`${sysInfo.os_name} ${sysInfo.os_release}`} accent />
@@ -236,7 +240,7 @@ export default function SystemInfoPage() {
         </div>
 
         {/* Hardware: CPU + Memory combined */}
-        <div className="col-12 col-md-6 col-xl-4 d-flex">
+        <div className="col-12 col-md-6 d-flex">
           <SysCard title="Hardware" icon={<Cpu size={15} />} fill>
             <div className="sysinfo-grid sysinfo-grid--fill">
               <SectionDivider label="Processor" />
@@ -254,12 +258,13 @@ export default function SystemInfoPage() {
         </div>
 
         {/* Uptime & Agent */}
-        <div className="col-12 col-md-6 col-xl-4 d-flex">
+        <div className="col-12 col-md-6 d-flex">
           <SysCard title="Uptime &amp; Agent" icon={<Timer size={15} />} fill>
             <div className="sysinfo-grid sysinfo-grid--fill">
               <InfoRow label="Uptime" value={uptimeStr} accent />
               <InfoRow label="Boot time" value={formatDateTime(sysInfo.boot_time)} />
               <InfoRow label="Last seen" value={formatDateTime(server.last_seen_at)} />
+              <InfoRow label="Agent user" value={agentUser} />
               <InfoRow label="Agent version" value={agentVersion} mono />
               <InfoRow label="Backend version" value={backendVersion} mono />
               {minAgentVersion ? (
@@ -271,11 +276,8 @@ export default function SystemInfoPage() {
           </SysCard>
         </div>
 
-      </div>
-
-      {/* ── Row 2: Server record (narrower) ── */}
-      <div className="row g-3 align-items-stretch">
-        <div className="col-12 col-md-6 col-xl-4 d-flex">
+        {/* Server Record */}
+        <div className="col-12 col-md-6 d-flex">
           <SysCard title="Server Record" icon={<Server size={15} />} fill>
             <div className="sysinfo-grid sysinfo-grid--fill">
               <InfoRow label="Name" value={server.name} />
@@ -287,6 +289,7 @@ export default function SystemInfoPage() {
             </div>
           </SysCard>
         </div>
+
       </div>
 
       {/* ── Disk Partitions ── */}

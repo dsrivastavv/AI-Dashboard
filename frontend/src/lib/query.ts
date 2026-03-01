@@ -10,7 +10,7 @@ export const TIME_RANGE_OPTIONS: TimeRangeOption[] = [
   { label: '24h', minutes: 1440 },
 ];
 
-const DEFAULT_MINUTES = 60;
+const DEFAULT_MINUTES = 15;
 const ALLOWED_MINUTES = new Set(TIME_RANGE_OPTIONS.map((option) => option.minutes));
 
 export function parseDashboardMinutes(raw: string | null): number {

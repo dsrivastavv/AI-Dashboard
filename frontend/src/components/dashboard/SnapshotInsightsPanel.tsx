@@ -51,21 +51,21 @@ export default function SnapshotInsightsPanel({ snapshot }: SnapshotInsightsPane
   const bottleneckEntity = getBottleneckEntity(snapshot.bottleneck.label);
 
   return (
-    <div className="card shadow-sm border-0 panel-card snapshot-insights-card">
-      <div className="card-body p-4">
-        <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-          <div>
-            <h2 className="h6 mb-1 panel-title">
-              <span className="panel-title-icon"><ScanSearch size={15} aria-hidden="true" /></span>
-              Snapshot Insights
-            </h2>
-            <div className="small panel-caption">Latest sample — operational context</div>
-          </div>
-          <span className={`chip entity--${bottleneckEntity} entity-chip snapshot-bottleneck-pill`}>
-            {bottleneckTitle}
-          </span>
+    <div className="panel-card snapshot-insights-card">
+      <div className="panel-head">
+        <div>
+          <h2 className="panel-title d-flex align-items-center gap-2">
+            <ScanSearch size={15} aria-hidden="true" />
+            Snapshot Insights
+          </h2>
+          <span className="panel-caption">Latest sample — operational context</span>
         </div>
+        <span className={`chip entity--${bottleneckEntity} entity-chip snapshot-bottleneck-pill`}>
+          {bottleneckTitle}
+        </span>
+      </div>
 
+      <div className="card-body">
         <div className="snapshot-insights-grid">
           <InsightRow icon={<Clock size={13} />}            label="Snapshot age"       value={formatRelativeSeconds(snapshot.age_seconds)} />
           <InsightRow icon={<Calendar size={13} />}         label="Collected at"       value={formatDateTime(snapshot.collected_at)} />

@@ -9,6 +9,7 @@ class MonitoredServerAdmin(admin.ModelAdmin):
         "name",
         "slug",
         "hostname",
+        "agent_user",
         "is_active",
         "last_seen_at",
         "last_agent_version",
@@ -23,13 +24,14 @@ class MonitoredServerAdmin(admin.ModelAdmin):
         "updated_at",
         "last_seen_at",
         "last_ip",
+        "agent_user",
         "last_agent_version",
         "agent_info",
     )
     fieldsets = (
         (None, {"fields": ("name", "slug", "hostname", "description", "is_active")}),
         ("Ingest Auth", {"fields": ("api_token_hash", "token_hint")}),
-        ("Agent Status", {"fields": ("last_seen_at", "last_ip", "last_agent_version", "agent_info")}),
+        ("Agent Status", {"fields": ("last_seen_at", "last_ip", "agent_user", "last_agent_version", "agent_info")}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 
