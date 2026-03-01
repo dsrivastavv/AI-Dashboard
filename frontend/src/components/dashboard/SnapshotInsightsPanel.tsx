@@ -36,7 +36,7 @@ function InsightRow({ icon, label, value }: InsightRowProps) {
   return (
     <div className="snapshot-insight-row">
       <span className="snapshot-insight-label">
-        <span className="snapshot-insight-emoji" aria-hidden="true">{icon}</span>
+        <span className="snapshot-insight-icon" aria-hidden="true">{icon}</span>
         {label}
       </span>
       <span className="snapshot-insight-value">{value}</span>

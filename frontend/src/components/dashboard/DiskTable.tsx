@@ -1,17 +1,10 @@
 import { ArrowDown, ArrowUp, Zap } from 'lucide-react';
-import { formatPercent, formatThroughput } from '../../lib/format';
+import { formatNumber, formatPercent, formatThroughput, utilSeverityClass } from '../../lib/format';
 import type { DiskDeviceMetric } from '../../types/api';
 import EmptyState from '../common/EmptyState';
 
 interface DiskTableProps {
   disks: DiskDeviceMetric[];
-}
-
-function utilColor(percent: number | null | undefined): string {
-  if (percent == null) return '';
-  if (percent >= 90) return 'util-critical';
-  if (percent >= 70) return 'util-warn';
-  return 'util-ok';
 }
 
 export default function DiskTable({ disks }: DiskTableProps) {
@@ -24,7 +17,7 @@ export default function DiskTable({ disks }: DiskTableProps) {
   return (
     <div className="card shadow-sm border-0 h-100 panel-card table-panel entity-panel entity-panel--disk">
       <div className="card-body p-0">
-        <div className="p-3 border-bottom table-panel-head">
+        <div className="px-4 py-3 border-bottom table-panel-head">
           <h2 className="h6 mb-0 panel-title d-flex align-items-center gap-2">
             <span className="entity-dot entity-dot--disk" aria-hidden="true" />
             Disk Devices
@@ -60,11 +53,11 @@ export default function DiskTable({ disks }: DiskTableProps) {
                   <td className="fw-semibold">{disk.device}</td>
                   <td>{formatThroughput(disk.read_bps)}</td>
                   <td>{formatThroughput(disk.write_bps)}</td>
-                  <td className={utilColor(disk.util_percent)}>
+                  <td className={utilSeverityClass(disk.util_percent)}>
                     {formatPercent(disk.util_percent)}
                   </td>
-                  <td className="text-body-secondary">{disk.read_iops.toFixed(1)}</td>
-                  <td className="text-body-secondary">{disk.write_iops.toFixed(1)}</td>
+                  <td className="text-body-secondary">{formatNumber(disk.read_iops)}</td>
+                  <td className="text-body-secondary">{formatNumber(disk.write_iops)}</td>
                 </tr>
               ))}
             </tbody>

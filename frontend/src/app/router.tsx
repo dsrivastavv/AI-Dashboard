@@ -3,6 +3,7 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import DashboardPage from '../pages/DashboardPage';
 import LoginPage from '../pages/LoginPage';
+import NotificationsPage from '../pages/NotificationsPage';
 import SystemInfoPage from '../pages/SystemInfoPage';
 import TerminalPage from '../pages/TerminalPage';
 
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
       { path: '/dashboard', element: <DashboardPage /> },
       { path: '/terminal', element: <TerminalPage /> },
       { path: '/system', element: <SystemInfoPage /> },
+      { path: '/notifications', element: <NotificationsPage /> },
     ],
   },
   {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import BrandName from '../common/BrandName';
 
 type AuthMode = 'signin' | 'register' | 'forgot';
 type SignInStep = 'email' | 'password';
@@ -69,7 +70,7 @@ const METRICS: { label: string; value: number; color: string }[] = [
   { label: 'GPU A100  ·  utilisation', value: 87, color: '#f97316' },
   { label: 'CPU  ·  usage', value: 52, color: '#3b82f6' },
   { label: 'Memory', value: 68, color: '#14b8a6' },
-  { label: 'Disk I/O', value: 34, color: '#8b5cf6' },
+  { label: 'Disk I/O', value: 34, color: '#8580b5' },
 ];
 
 // ── Eye icon ─────────────────────────────────────────────────────────────────
@@ -150,36 +151,45 @@ export default function LoginCard({
     setSiStep('email');
   }
 
-  return (
-    <div className="claude-shell">
-      <div className="claude-bg-grid" aria-hidden="true" />
+  const alertMsg = showAccessDenied
+    ? 'Access denied. Your Google account is not in the allowlist.'
+    : error || successMessage || '';
+  const alertVariant = successMessage && !showAccessDenied && !error ? 'success' : 'error';
+  const toast = alertMsg ? (
+    <div className={`aid-toast aid-toast--${alertVariant}`} role="alert">
+      {alertVariant === 'error' && (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+      )}
+      {alertMsg}
+    </div>
+  ) : null;
 
-      <div className="claude-hero">
+  return (
+    <div className="aid-shell">
+      {toast}
+      <div className="aid-bg-grid" aria-hidden="true" />
+
+      <div className="aid-hero">
         {/* ── Left: login ── */}
-        <div className="claude-left">
-          <div className="claude-brand">
-            <div className="claude-burst" aria-hidden="true" />
-            <span>AI Dashboard</span>
+        <div className="aid-left">
+          <div className="aid-brand">
+            <BrandName />
           </div>
 
-          <div className="claude-card">
-            <h2 className="claude-card-heading">
+          <div className="aid-card">
+            <h2 className="aid-card-heading">
               {mode === 'register' ? 'Create account' : mode === 'forgot' ? 'Reset password' : 'Sign in'}
             </h2>
-
-            {showAccessDenied && (
-              <div className="claude-alert" role="alert">
-                Access denied. Your Google account is not in the allowlist.
-              </div>
-            )}
-            {error && <div className="claude-alert" role="alert">{error}</div>}
-            {successMessage && <div className="claude-alert claude-alert--success" role="status">{successMessage}</div>}
 
             {mode === 'signin' && (
               <>
                 <button
                   type="button"
-                  className="claude-google"
+                  className="aid-google"
                   onClick={onGoogleSignIn}
                   disabled={busy}
                 >
@@ -187,14 +197,14 @@ export default function LoginCard({
                   <span>{isCheckingSession ? 'Checking session…' : 'Continue with Google'}</span>
                 </button>
 
-                <div className="claude-divider">OR</div>
+                <div className="aid-divider">OR</div>
 
                 {siStep === 'email' ? (
-                  <form className="claude-form" onSubmit={handleEmailStep} noValidate>
-                    <label className="claude-label" htmlFor="si-email">Email</label>
+                  <form className="aid-form" onSubmit={handleEmailStep} noValidate>
+                    <label className="aid-label" htmlFor="si-email">Email</label>
                     <input
                       id="si-email"
-                      className="claude-input"
+                      className="aid-input"
                       type="email"
                       autoComplete="email"
                       placeholder="you@example.com"
@@ -204,26 +214,26 @@ export default function LoginCard({
                       // eslint-disable-next-line jsx-a11y/no-autofocus
                       autoFocus
                     />
-                    <button
-                      type="submit"
-                      className="claude-submit"
-                      disabled={busy || !siEmail.trim()}
-                    >
-                      Continue
-                    </button>
-                    <div className="claude-links">
-                      <button type="button" className="claude-link" onClick={() => switchMode('register')}>
-                        Create account
+                    <div className="aid-links">
+                      <button type="button" className="aid-link" onClick={() => switchMode('forgot')}>
+                        Forgot password?
                       </button>
                     </div>
+                    <button
+                      type="submit"
+                      className="aid-submit"
+                      disabled={busy || !siEmail.trim()}
+                    >
+                      Continue with Email
+                    </button>
                   </form>
                 ) : (
-                  <form className="claude-form" onSubmit={handleSignIn} noValidate>
-                    <label className="claude-label" htmlFor="si-password">Password</label>
-                    <div className="claude-input-wrap">
+                  <form className="aid-form" onSubmit={handleSignIn} noValidate>
+                    <label className="aid-label" htmlFor="si-password">Password</label>
+                    <div className="aid-input-wrap">
                       <input
                         id="si-password"
-                        className="claude-input"
+                        className="aid-input"
                         type={siShowPass ? 'text' : 'password'}
                         autoComplete="current-password"
                         placeholder="••••••••"
@@ -235,7 +245,7 @@ export default function LoginCard({
                       />
                       <button
                         type="button"
-                        className="claude-eye"
+                        className="aid-eye"
                         onClick={() => setSiShowPass((v) => !v)}
                         aria-label={siShowPass ? 'Hide password' : 'Show password'}
                       >
@@ -245,28 +255,22 @@ export default function LoginCard({
 
                     <button
                       type="submit"
-                      className="claude-submit"
+                      className="aid-submit"
                       disabled={busy || !siPassword}
                     >
                       {isLoading ? 'Signing in…' : 'Sign in'}
                     </button>
-
-                    <div className="claude-links">
-                      <button type="button" className="claude-link" onClick={() => switchMode('forgot')}>
-                        Forgot password?
-                      </button>
-                    </div>
                   </form>
                 )}
               </>
             )}
 
             {mode === 'register' && (
-              <form className="claude-form" onSubmit={handleRegister} noValidate>
-                <label className="claude-label" htmlFor="reg-username">Username</label>
+              <form className="aid-form" onSubmit={handleRegister} noValidate>
+                <label className="aid-label" htmlFor="reg-username">Username</label>
                 <input
                   id="reg-username"
-                  className="claude-input"
+                  className="aid-input"
                   type="text"
                   autoComplete="username"
                   placeholder="choose a username"
@@ -275,10 +279,10 @@ export default function LoginCard({
                   disabled={busy}
                 />
 
-                <label className="claude-label" htmlFor="reg-email">Email</label>
+                <label className="aid-label" htmlFor="reg-email">Email</label>
                 <input
                   id="reg-email"
-                  className="claude-input"
+                  className="aid-input"
                   type="email"
                   autoComplete="email"
                   placeholder="you@example.com"
@@ -287,11 +291,11 @@ export default function LoginCard({
                   disabled={busy}
                 />
 
-                <label className="claude-label" htmlFor="reg-password">Password</label>
-                <div className="claude-input-wrap">
+                <label className="aid-label" htmlFor="reg-password">Password</label>
+                <div className="aid-input-wrap">
                   <input
                     id="reg-password"
-                    className="claude-input"
+                    className="aid-input"
                     type={regShowPass ? 'text' : 'password'}
                     autoComplete="new-password"
                     placeholder="min 8 characters"
@@ -301,7 +305,7 @@ export default function LoginCard({
                   />
                   <button
                     type="button"
-                    className="claude-eye"
+                    className="aid-eye"
                     onClick={() => setRegShowPass((v) => !v)}
                     aria-label={regShowPass ? 'Hide password' : 'Show password'}
                   >
@@ -309,10 +313,10 @@ export default function LoginCard({
                   </button>
                 </div>
 
-                <label className="claude-label" htmlFor="reg-confirm">Confirm password</label>
+                <label className="aid-label" htmlFor="reg-confirm">Confirm password</label>
                 <input
                   id="reg-confirm"
-                  className={`claude-input${passwordMismatch ? ' claude-input--error' : ''}`}
+                  className={`aid-input${passwordMismatch ? ' aid-input--error' : ''}`}
                   type={regShowPass ? 'text' : 'password'}
                   autoComplete="new-password"
                   placeholder="repeat password"
@@ -320,18 +324,18 @@ export default function LoginCard({
                   onChange={(e) => setRegConfirm(e.target.value)}
                   disabled={busy}
                 />
-                {passwordMismatch && <p className="claude-error-text">Passwords don't match</p>}
+                {passwordMismatch && <p className="aid-error-text">Passwords don't match</p>}
 
                 <button
                   type="submit"
-                  className="claude-submit"
+                  className="aid-submit"
                   disabled={busy || !regUsername.trim() || !regEmail.trim() || !regPassword || passwordMismatch}
                 >
                   {isLoading ? 'Creating…' : 'Create account'}
                 </button>
 
-                <div className="claude-links">
-                  <button type="button" className="claude-link" onClick={() => switchMode('signin')}>
+                <div className="aid-links">
+                  <button type="button" className="aid-link" onClick={() => switchMode('signin')}>
                     Back to sign in
                   </button>
                 </div>
@@ -339,12 +343,12 @@ export default function LoginCard({
             )}
 
             {mode === 'forgot' && (
-              <form className="claude-form" onSubmit={handleForgotPassword} noValidate>
-                <p className="claude-help">Enter your email and we'll send you a reset link.</p>
-                <label className="claude-label" htmlFor="fp-email">Email</label>
+              <form className="aid-form" onSubmit={handleForgotPassword} noValidate>
+                <p className="aid-help">Enter your email and we'll send you a reset link.</p>
+                <label className="aid-label" htmlFor="fp-email">Email</label>
                 <input
                   id="fp-email"
-                  className="claude-input"
+                  className="aid-input"
                   type="email"
                   autoComplete="email"
                   placeholder="you@example.com"
@@ -355,21 +359,21 @@ export default function LoginCard({
 
                 <button
                   type="submit"
-                  className="claude-submit"
+                  className="aid-submit"
                   disabled={busy || !fpEmail.trim()}
                 >
                   {isLoading ? 'Sending…' : 'Send reset link'}
                 </button>
 
-                <div className="claude-links">
-                  <button type="button" className="claude-link" onClick={() => switchMode('signin')}>
+                <div className="aid-links">
+                  <button type="button" className="aid-link" onClick={() => switchMode('signin')}>
                     Back to sign in
                   </button>
                 </div>
               </form>
             )}
 
-            <p className="claude-note">
+            <p className="aid-note">
               By continuing, you agree to AI Dashboard&apos;s Privacy Policy and Terms.
             </p>
 
@@ -377,24 +381,24 @@ export default function LoginCard({
         </div>
 
         {/* ── Right: features ── */}
-        <div className="claude-right" aria-hidden="true">
-          <p className="claude-kicker">Real-time AI infrastructure monitoring</p>
-          <h2 className="claude-title">Your cluster,<br />always in view</h2>
-          <p className="claude-sub">Track GPU, CPU, memory and disk across every training node — from one unified dashboard.</p>
+        <div className="aid-right" aria-hidden="true">
+          <p className="aid-kicker">Real-time AI infrastructure monitoring</p>
+          <h2 className="aid-title">Your cluster,<br />always in view</h2>
+          <p className="aid-sub">Track GPU, CPU, memory and disk across every training node — from one unified dashboard.</p>
 
           {/* Server status bar */}
-          <div className="claude-preview-header">
-            <div className="claude-preview-status">
-              <span className="claude-live-dot" />
-              <span className="claude-preview-server">gpu-cluster-01</span>
+          <div className="aid-preview-header">
+            <div className="aid-preview-status">
+              <span className="aid-live-dot" />
+              <span className="aid-preview-server">gpu-cluster-01</span>
             </div>
-            <span className="claude-preview-badge">4 servers online</span>
+            <span className="aid-preview-badge">4 servers online</span>
           </div>
 
           {/* Live metrics */}
-          <div className="claude-metrics-panel">
-            <div className="claude-metrics-heading">
-              <span className="claude-metrics-live-dot" />
+          <div className="aid-metrics-panel">
+            <div className="aid-metrics-heading">
+              <span className="aid-metrics-live-dot" />
               Live telemetry
             </div>
             {METRICS.map((m) => (
@@ -403,17 +407,17 @@ export default function LoginCard({
           </div>
 
           {/* Feature highlights */}
-          <ul className="claude-feature-grid" role="list">
+          <ul className="aid-feature-grid" role="list">
             {FEATURES.map((f, i) => (
               <li
                 key={f.title}
-                className="claude-feature-item"
+                className="aid-feature-item"
                 style={{ animationDelay: `${i * 0.1}s` }}
               >
-                <img className="claude-feature-icon" src={f.gif} alt="" aria-hidden="true" />
+                <img className="aid-feature-icon" src={f.gif} alt="" aria-hidden="true" />
                 <div>
-                  <p className="claude-feature-title">{f.title}</p>
-                  <p className="claude-feature-desc">{f.desc}</p>
+                  <p className="aid-feature-title">{f.title}</p>
+                  <p className="aid-feature-desc">{f.desc}</p>
                 </div>
               </li>
             ))}

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Cpu, Database, Globe, HardDrive } from 'lucide-react';
+import { Cpu, Database, Gamepad2, Globe, HardDrive } from 'lucide-react';
 import {
   formatBytes,
   formatNumber,
@@ -54,16 +54,16 @@ export default function SummaryCards({ snapshot }: SummaryCardsProps) {
   const cpuCountText = snapshot.cpu.count_logical > 0
     ? `${snapshot.cpu.count_logical} threads`
     : undefined;
-  const cpuLoadMeta = `Load ${formatNumber(snapshot.cpu.load_1, 2)}`;
+  const cpuLoadMeta = `Load: ${formatNumber(snapshot.cpu.load_1, 2)}${cpuCountText ? ` | ${cpuCountText}` : ''}`;
   const cpuTempHint = snapshot.cpu.temperature_c == null
-    ? 'Temp -'
-    : `Temp ${formatNumber(snapshot.cpu.temperature_c)}°C`;
-  const memoryMeta = `${formatBytes(snapshot.memory.used_bytes)} / ${formatBytes(snapshot.memory.total_bytes)}`;
+    ? 'Temp: -'
+    : `Temp: ${formatNumber(snapshot.cpu.temperature_c)}°C`;
+  const memoryMeta = `RAM: ${formatBytes(snapshot.memory.used_bytes)} / ${formatBytes(snapshot.memory.total_bytes)}`;
   const networkValue = formatThroughput(snapshot.network.rx_bps + snapshot.network.tx_bps);
   const networkMeta = `↓ ${formatThroughput(snapshot.network.rx_bps)}`;
-  const diskMeta = `Read ${formatThroughput(snapshot.disk.read_bps)}`;
+  const diskMeta = `Read: ${formatThroughput(snapshot.disk.read_bps)}`;
   const gpuValue = snapshot.gpu.present ? formatPercent(gpuMemoryPercent) : 'No GPU';
-  const gpuMeta = topGpuTemp == null ? 'Temp -' : `Temp ${formatNumber(topGpuTemp)} C`;
+  const gpuMeta = topGpuTemp == null ? 'Temp: —' : `Temp: ${formatNumber(topGpuTemp)}°C`;
   const gpuHint = snapshot.gpu.present ? `${snapshot.gpu.count} GPU(s)` : 'No accelerators';
 
   return (
@@ -72,7 +72,7 @@ export default function SummaryCards({ snapshot }: SummaryCardsProps) {
         label={<><Cpu size={12} aria-hidden="true" /> CPU Usage</>}
         value={formatPercent(snapshot.cpu.usage_percent)}
         meta={cpuLoadMeta}
-        hint={`${cpuTempHint}${cpuCountText ? ` | ${cpuCountText}` : ''}`}
+        hint={cpuTempHint}
         tone="cpu"
         barPercent={snapshot.cpu.usage_percent}
       />
@@ -81,8 +81,8 @@ export default function SummaryCards({ snapshot }: SummaryCardsProps) {
         value={formatPercent(snapshot.memory.percent)}
         meta={memoryMeta}
         hint={snapshot.memory.swap_percent > 0
-          ? `Swap ${formatPercent(snapshot.memory.swap_percent)}`
-          : 'Swap idle'}
+          ? `Swap: ${formatPercent(snapshot.memory.swap_percent)}`
+          : 'Swap: idle'}
         tone="memory"
         barPercent={snapshot.memory.percent}
       />
@@ -90,7 +90,7 @@ export default function SummaryCards({ snapshot }: SummaryCardsProps) {
         label={<><HardDrive size={12} aria-hidden="true" /> Disk Util</>}
         value={formatPercent(snapshot.disk.util_percent)}
         meta={diskMeta}
-        hint={`↓ ${formatThroughput(snapshot.disk.write_bps)} write`}
+        hint={`Write: ${formatThroughput(snapshot.disk.write_bps)}`}
         tone="disk"
         barPercent={snapshot.disk.util_percent}
       />
@@ -102,7 +102,7 @@ export default function SummaryCards({ snapshot }: SummaryCardsProps) {
         tone="network"
       />
       <MetricCard
-        label={<><Database size={12} aria-hidden="true" /> GPU Memory</>}
+        label={<><Gamepad2 size={12} aria-hidden="true" /> GPU Memory</>}
         value={gpuValue}
         meta={gpuMeta}
         hint={gpuHint}

@@ -21,6 +21,10 @@ class MonitoredServer(models.Model):
     api_token_hash = models.CharField(max_length=64, db_index=True)
     is_active = models.BooleanField(default=True)
 
+    # Stable machine identifier (from /etc/machine-id on Linux) used to
+    # deduplicate servers across agent re-installs on the same machine.
+    machine_id = models.CharField(max_length=128, blank=True, null=True, unique=True, db_index=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_seen_at = models.DateTimeField(null=True, blank=True, db_index=True)
@@ -84,6 +88,72 @@ class MonitoredServer(models.Model):
             if changed:
                 server.save(update_fields=["hostname", "name", "api_token_hash", "updated_at"])
         return server
+
+    @classmethod
+    def enroll_or_update(
+        cls,
+        *,
+        machine_id: str,
+        hostname: str,
+        platform_info: str = "",
+        agent_version: str = "",
+        source_ip: str | None = None,
+    ) -> tuple["MonitoredServer", str]:
+        """Find or create a server by stable machine_id; rotate and return a fresh ingest token.
+
+        Returns (server, plain_token).  The plain_token is returned only once here;
+        the server stores its hash.  The agent must persist it.
+        Multiple installs/uninstalls on the same machine will always resolve to the
+        same MonitoredServer row because machine_id is unique.
+        """
+        from django.utils import timezone
+
+        new_token = cls.generate_token()
+        token_hash = cls.hash_token(new_token)
+
+        # Build a deterministic slug from the hostname, deduplicated by machine_id.
+        base_slug = slugify(hostname or machine_id[:32] or "agent")[:60] or "agent"
+
+        server = cls.objects.filter(machine_id=machine_id).first()
+        if server is None:
+            # First-ever enrollment for this machine – create a new server.
+            # Pick a unique slug (append suffix if needed).
+            slug = base_slug
+            suffix = 1
+            while cls.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{suffix}"
+                suffix += 1
+            server = cls.objects.create(
+                machine_id=machine_id,
+                slug=slug,
+                name=hostname[:128] or slug,
+                hostname=hostname[:255],
+                api_token_hash=token_hash,
+                is_active=True,
+                last_agent_version=agent_version[:64],
+                agent_info={"platform": platform_info},
+                last_ip=source_ip,
+                last_seen_at=timezone.now(),
+            )
+        else:
+            # Existing machine – update metadata and rotate token.
+            update_fields = ["api_token_hash", "updated_at", "last_seen_at", "last_agent_version", "agent_info"]
+            server.api_token_hash = token_hash
+            server.last_seen_at = timezone.now()
+            server.last_agent_version = agent_version[:64]
+            server.agent_info = {"platform": platform_info}
+            if hostname and server.hostname != hostname[:255]:
+                server.hostname = hostname[:255]
+                update_fields.append("hostname")
+            if not server.is_active:
+                server.is_active = True
+                update_fields.append("is_active")
+            if source_ip:
+                server.last_ip = source_ip
+                update_fields.append("last_ip")
+            server.save(update_fields=update_fields)
+
+        return server, new_token
 
 
 class MetricSnapshot(models.Model):

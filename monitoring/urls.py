@@ -17,6 +17,8 @@ urlpatterns = [
         views.api_ingest_server_metrics,
         name="api_ingest_server_metrics",
     ),
+    # Agent self-enrollment (agent authenticates and obtains its own ingest token)
+    path("api/agent/enroll/", views.api_agent_enroll, name="api_agent_enroll"),
     # Credential-based auth
     path("api/auth/login/", views.api_auth_login, name="api_auth_login"),
     path("api/auth/register/", views.api_auth_register, name="api_auth_register"),

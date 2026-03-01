@@ -641,6 +641,88 @@ def api_ingest_server_metrics(request, server_slug: str):
     )
 
 
+# ── Agent self-enrollment ─────────────────────────────────────────────────────
+
+@csrf_exempt
+@require_POST
+@_rate_limit(max_requests=30, window_seconds=60)
+def api_agent_enroll(request):
+    """Agent-initiated enrollment: authenticate with user credentials, obtain an ingest token.
+
+    Flow
+    ----
+    1. Agent POSTs username + password + machine_id (from /etc/machine-id).
+    2. We verify credentials and allowlist membership.
+    3. We find-or-create a MonitoredServer keyed by machine_id, rotate its ingest
+       token, and return slug + fresh plain token.
+    4. The agent stores the returned token and uses it for subsequent metric ingest calls.
+
+    Installing / uninstalling the agent N times on the same machine will always
+    resolve to the same server record because machine_id is unique.
+    """
+    from django.contrib.auth import authenticate as django_authenticate
+
+    body, error_response = _load_json_dict(request)
+    if error_response is not None:
+        return error_response
+
+    username = (body.get("username") or "").strip()
+    password = body.get("password") or ""
+    machine_id = (body.get("machine_id") or "").strip()
+    hostname = (body.get("hostname") or "").strip()
+    platform_info = (body.get("platform") or "").strip()
+    agent_version = (body.get("agent_version") or "").strip()
+
+    if not username or not password:
+        return JsonResponse({"ok": False, "error": "username and password are required."}, status=400)
+    if not machine_id:
+        return JsonResponse({"ok": False, "error": "machine_id is required."}, status=400)
+    if not hostname:
+        return JsonResponse({"ok": False, "error": "hostname is required."}, status=400)
+
+    user = django_authenticate(request, username=username, password=password)
+    if user is None:
+        logger.info("Agent enroll: auth failed for username=%s", username)
+        return JsonResponse({"ok": False, "error": "Invalid credentials."}, status=401)
+    if not user.is_active:
+        return JsonResponse({"ok": False, "error": "Account is disabled."}, status=403)
+
+    user_email = getattr(user, "email", "")
+    if not is_google_email_allowlisted(user_email):
+        logger.warning("Agent enroll: allowlist check failed for user=%s email=%s", username, user_email)
+        return JsonResponse({"ok": False, "error": "Account not in allowlist."}, status=403)
+
+    # Sanitise machine_id to prevent injection – accept only hex/hyphen/alphanum up to 128 chars.
+    import re as _re
+    if not _re.fullmatch(r"[a-zA-Z0-9\-]{1,128}", machine_id):
+        return JsonResponse({"ok": False, "error": "Invalid machine_id format."}, status=400)
+
+    server, ingest_token = MonitoredServer.enroll_or_update(
+        machine_id=machine_id,
+        hostname=hostname,
+        platform_info=platform_info,
+        agent_version=agent_version,
+        source_ip=_request_ip(request),
+    )
+
+    logger.info(
+        "Agent enrolled: machine_id=%s server_slug=%s user=%s agent_version=%s",
+        machine_id,
+        server.slug,
+        username,
+        agent_version,
+    )
+    return JsonResponse(
+        {
+            "ok": True,
+            "server_slug": server.slug,
+            "ingest_token": ingest_token,
+            "server": _serialize_server(server),
+        },
+        status=200,
+    )
+
+
 # ── Credential auth views ─────────────────────────────────────────────────────
 
 @require_POST

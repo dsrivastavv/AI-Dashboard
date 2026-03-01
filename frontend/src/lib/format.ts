@@ -77,3 +77,19 @@ export function formatLabel(label: string | null | undefined): string {
     .replace(/[-_]/g, ' ')
     .replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
+
+/** Returns a CSS severity class based on utilisation percent. */
+export function utilSeverityClass(percent: number | null | undefined): string {
+  if (percent == null) return '';
+  if (percent >= 90) return 'util-critical';
+  if (percent >= 70) return 'util-warn';
+  return 'util-ok';
+}
+
+/** Returns a CSS severity class based on temperature in °C. */
+export function tempSeverityClass(celsius: number | null | undefined): string {
+  if (celsius == null) return '';
+  if (celsius >= 85) return 'util-critical';
+  if (celsius >= 70) return 'util-warn';
+  return '';
+}

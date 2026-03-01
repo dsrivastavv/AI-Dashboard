@@ -1,24 +1,10 @@
 import { Database, Plug, Thermometer, Zap } from 'lucide-react';
-import { formatBytes, formatNumber, formatPercent } from '../../lib/format';
+import { formatBytes, formatNumber, formatPercent, tempSeverityClass, utilSeverityClass } from '../../lib/format';
 import type { GpuDeviceMetric } from '../../types/api';
 import EmptyState from '../common/EmptyState';
 
 interface GpuTableProps {
   gpus: GpuDeviceMetric[];
-}
-
-function utilColor(percent: number | null | undefined): string {
-  if (percent == null) return '';
-  if (percent >= 90) return 'util-critical';
-  if (percent >= 70) return 'util-warn';
-  return 'util-ok';
-}
-
-function tempColor(c: number | null | undefined): string {
-  if (c == null) return '';
-  if (c >= 85) return 'util-critical';
-  if (c >= 70) return 'util-warn';
-  return '';
 }
 
 export default function GpuTable({ gpus }: GpuTableProps) {
@@ -31,7 +17,7 @@ export default function GpuTable({ gpus }: GpuTableProps) {
   return (
     <div className="card shadow-sm border-0 h-100 panel-card table-panel entity-panel entity-panel--gpu">
       <div className="card-body p-0">
-        <div className="p-3 border-bottom table-panel-head">
+        <div className="px-4 py-3 border-bottom table-panel-head">
           <h2 className="h6 mb-0 panel-title d-flex align-items-center gap-2">
             <span className="entity-dot entity-dot--gpu" aria-hidden="true" />
             GPU Devices
@@ -73,18 +59,18 @@ export default function GpuTable({ gpus }: GpuTableProps) {
                     <div className="fw-semibold">{gpu.name || `GPU ${gpu.gpu_index}`}</div>
                     <div className="small text-body-secondary">{gpu.uuid || 'No UUID'}</div>
                   </td>
-                  <td className={utilColor(gpu.utilization_gpu_percent)}>
+                  <td className={utilSeverityClass(gpu.utilization_gpu_percent)}>
                     {formatPercent(gpu.utilization_gpu_percent)}
                   </td>
                   <td>
-                    <div className={utilColor(gpu.memory_percent)}>
+                    <div className={utilSeverityClass(gpu.memory_percent)}>
                       {formatPercent(gpu.memory_percent)}
                     </div>
                     <div className="small text-body-secondary">
                       {formatBytes(gpu.memory_used_bytes)} / {formatBytes(gpu.memory_total_bytes)}
                     </div>
                   </td>
-                  <td className={tempColor(gpu.temperature_c)}>
+                  <td className={tempSeverityClass(gpu.temperature_c)}>
                     {gpu.temperature_c == null ? '—' : `${formatNumber(gpu.temperature_c)}°C`}
                   </td>
                   <td>

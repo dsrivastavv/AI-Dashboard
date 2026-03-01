@@ -201,7 +201,7 @@ export default function SystemInfoPage() {
   const agentVersion = server.last_agent_version || (server.agent_info?.version as string | undefined) || '—';
 
   return (
-    <div className="sysinfo-page">
+    <div className="app-main-inner sysinfo-page">
 
       {/* ── Page header ── */}
       <div className="sysinfo-page-header">
@@ -225,7 +225,7 @@ export default function SystemInfoPage() {
 
         {/* Operating System */}
         <div className="col-12 col-md-6 col-xl-4 d-flex">
-          <SysCard title="Operating System" icon={<Info size={14} />} fill>
+          <SysCard title="Operating System" icon={<Info size={15} />} fill>
             <div className="sysinfo-grid sysinfo-grid--fill">
               <InfoRow label="OS" value={`${sysInfo.os_name} ${sysInfo.os_release}`} accent />
               <InfoRow label="Architecture" value={sysInfo.machine} />
@@ -237,7 +237,7 @@ export default function SystemInfoPage() {
 
         {/* Hardware: CPU + Memory combined */}
         <div className="col-12 col-md-6 col-xl-4 d-flex">
-          <SysCard title="Hardware" icon={<Cpu size={14} />} fill>
+          <SysCard title="Hardware" icon={<Cpu size={15} />} fill>
             <div className="sysinfo-grid sysinfo-grid--fill">
               <SectionDivider label="Processor" />
               <InfoRow label="Model" value={sysInfo.cpu_model || sysInfo.processor} />
@@ -255,7 +255,7 @@ export default function SystemInfoPage() {
 
         {/* Uptime & Agent */}
         <div className="col-12 col-md-6 col-xl-4 d-flex">
-          <SysCard title="Uptime &amp; Agent" icon={<Timer size={14} />} fill>
+          <SysCard title="Uptime &amp; Agent" icon={<Timer size={15} />} fill>
             <div className="sysinfo-grid sysinfo-grid--fill">
               <InfoRow label="Uptime" value={uptimeStr} accent />
               <InfoRow label="Boot time" value={formatDateTime(sysInfo.boot_time)} />
@@ -276,7 +276,7 @@ export default function SystemInfoPage() {
       {/* ── Row 2: Server record (narrower) ── */}
       <div className="row g-3 align-items-stretch">
         <div className="col-12 col-md-6 col-xl-4 d-flex">
-          <SysCard title="Server Record" icon={<Server size={14} />} fill>
+          <SysCard title="Server Record" icon={<Server size={15} />} fill>
             <div className="sysinfo-grid sysinfo-grid--fill">
               <InfoRow label="Name" value={server.name} />
               <InfoRow label="Slug" value={server.slug} mono accent />
@@ -290,12 +290,12 @@ export default function SystemInfoPage() {
       </div>
 
       {/* ── Disk Partitions ── */}
-      <SysCard title="Disk Partitions" icon={<HardDrive size={14} />}>
+      <SysCard title="Disk Partitions" icon={<HardDrive size={15} />}>
         <PartitionsTable partitions={sysInfo.partitions ?? []} />
       </SysCard>
 
       {/* ── Network Interfaces ── */}
-      <SysCard title="Network Interfaces" icon={<Network size={14} />}>
+      <SysCard title="Network Interfaces" icon={<Network size={15} />}>
         <InterfacesList interfaces={sysInfo.interfaces ?? []} />
       </SysCard>
 

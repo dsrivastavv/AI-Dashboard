@@ -22,6 +22,7 @@ type SetSearchParams = ReturnType<typeof useSearchParams>[1];
 
 export type AppLayoutContext = {
   data: ReturnType<typeof useDashboardData>;
+  notifications: ReturnType<typeof useNotifications>;
   themeMode: DashboardThemeMode;
   searchParams: URLSearchParams;
   setSearchParams: SetSearchParams;
@@ -80,9 +81,10 @@ export default function AppLayout() {
         }}
         isServerLoading={data.isInitialLoading}
         onCreateServer={() => setShowCreateServer(true)}
+        notifUnreadCount={notifications.unreadCount}
       />
     ),
-    [data, themeMode, searchParams, selectedServerSlug, setSearchParams],
+    [data, themeMode, searchParams, selectedServerSlug, setSearchParams, notifications.unreadCount],
   );
 
   if (accessDeniedFromQuery) {
@@ -102,26 +104,29 @@ export default function AppLayout() {
 
   const isOnTerminal = location.pathname === '/terminal';
   const isOnSystemInfo = location.pathname === '/system';
-  const title = isOnTerminal
+  const isOnNotifications = location.pathname === '/notifications';
+
+  // Large title = workstation/server name; small subtitle = tab name
+  const serverName = data.selectedServer?.name ?? 'Operations Center';
+  const tabLabel = isOnTerminal
     ? 'Terminal'
     : isOnSystemInfo
-      ? 'System Information'
-      : (data.selectedServer ? data.selectedServer.name : 'Operations Center');
-  const subtitle = isOnTerminal
-    ? 'Interactive shell'
-    : isOnSystemInfo
-      ? (data.selectedServer ? `${data.selectedServer.hostname || data.selectedServer.slug} — static details` : 'Select a server')
-      : (data.selectedServer ? (data.selectedServer.hostname ?? data.selectedServer.slug) : 'Select a server to begin monitoring');
+      ? 'System Info'
+      : isOnNotifications
+        ? 'Notifications'
+        : 'Stats';
+  const title = serverName;
+  const subtitle = tabLabel;
 
-  if (data.isInitialLoading && !isOnTerminal) {
+  if (data.isInitialLoading && !isOnTerminal && !isOnNotifications) {
     return (
-      <AppShell title="Operations Center" subtitle="Loading metrics..." sidebar={sidebar} themeMode={themeMode}>
+      <AppShell title={serverName} subtitle="Stats" sidebar={sidebar} themeMode={themeMode}>
         <LoadingState />
       </AppShell>
     );
   }
 
-  const context: AppLayoutContext = { data, themeMode, searchParams, setSearchParams, systemMinutes, ioMinutes };
+  const context: AppLayoutContext = { data, notifications, themeMode, searchParams, setSearchParams, systemMinutes, ioMinutes };
 
   return (
     <AppShell

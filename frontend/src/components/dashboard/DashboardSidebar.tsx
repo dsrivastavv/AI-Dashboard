@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
+import BrandName from '../common/BrandName';
 import {
   ArrowLeftRight,
+  Bell,
   Info,
   LogOut,
   Moon,
@@ -11,7 +13,6 @@ import {
   Sun,
   Terminal,
   User,
-  Zap,
 } from 'lucide-react';
 
 import type { ServerSummary } from '../../types/api';
@@ -28,6 +29,7 @@ interface DashboardSidebarProps {
   onServerChange: (slug: string | null) => void;
   isServerLoading?: boolean;
   onCreateServer?: () => void;
+  notifUnreadCount?: number;
 }
 
 export default function DashboardSidebar({
@@ -40,6 +42,7 @@ export default function DashboardSidebar({
   onServerChange,
   isServerLoading = false,
   onCreateServer,
+  notifUnreadCount = 0,
 }: DashboardSidebarProps) {
   const { pathname, search } = useLocation();
 
@@ -48,10 +51,7 @@ export default function DashboardSidebar({
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-logo">
-          <div className="sidebar-brand-icon" aria-hidden="true">
-            <Zap size={16} color="white" />
-          </div>
-          <span className="sidebar-brand-name">AI Dashboard</span>
+          <span className="sidebar-brand-name"><BrandName /></span>
         </div>
         <div className="sidebar-brand-tagline">
           Real-time AI infrastructure monitoring
@@ -114,7 +114,7 @@ export default function DashboardSidebar({
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
             </svg>
-            Dashboard
+            Stats
           </Link>
           <Link
             to={{ pathname: '/terminal', search }}
@@ -129,6 +129,16 @@ export default function DashboardSidebar({
           >
             <Info size={13} aria-hidden="true" />
             System Info
+          </Link>
+          <Link
+            to={{ pathname: '/notifications', search }}
+            className={`sidebar-tab${pathname === '/notifications' ? ' is-active' : ''}`}
+          >
+            <Bell size={13} aria-hidden="true" />
+            Notifications
+            {notifUnreadCount > 0 && (
+              <span className="sidebar-tab-badge">{notifUnreadCount > 99 ? '99+' : notifUnreadCount}</span>
+            )}
           </Link>
         </nav>
       </div>

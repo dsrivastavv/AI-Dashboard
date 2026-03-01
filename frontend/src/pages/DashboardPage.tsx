@@ -36,7 +36,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="app-main-inner d-flex flex-column gap-3">
       {data.accessDenied ? (
         <ErrorState
           title="Access denied"
@@ -91,10 +91,10 @@ export default function DashboardPage() {
           <SummaryCards snapshot={latestSnapshot} />
 
           <div className="row g-3">
-            <div className="col-12 col-xxl-7">
+            <div className="col-12">
               <GpuTable gpus={latestSnapshot.gpu.devices} />
             </div>
-            <div className="col-12 col-xxl-5">
+            <div className="col-12">
               <DiskTable disks={latestSnapshot.disk.devices} />
             </div>
           </div>
