@@ -106,7 +106,7 @@ struct LoginView: View {
                             .font(.system(size: 11, weight: .semibold, design: .rounded))
                             .foregroundStyle(.secondary)
                         HStack {
-                            TextField("http://127.0.0.1:8000", text: $store.baseURLString)
+                            TextField("http://sdworkstation.ucsd.edu:8000", text: $store.baseURLString)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(size: 12, weight: .medium, design: .monospaced))
                                 .disableAutocorrection(true)

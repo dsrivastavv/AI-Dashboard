@@ -4,6 +4,8 @@ import Foundation
 
 @MainActor
 final class AppStore: ObservableObject {
+    private static let defaultBaseURLString = "http://sdworkstation.ucsd.edu:8000"
+
     enum DashboardTab: String, CaseIterable, Identifiable {
         case stats
         case terminal
@@ -37,7 +39,7 @@ final class AppStore: ObservableObject {
     @Published var mode: ThemeMode = .dark
     @Published var tab: DashboardTab = .stats
 
-    @Published var baseURLString: String = "http://127.0.0.1:8000"
+    @Published var baseURLString: String = Self.defaultBaseURLString
 
     @Published var isCheckingSession = true
     @Published var isAuthenticated = false
@@ -76,7 +78,7 @@ final class AppStore: ObservableObject {
     private var notificationsTimer: Timer?
 
     init() {
-        let url = URL(string: baseURLString) ?? URL(string: "http://127.0.0.1:8000")!
+        let url = URL(string: Self.defaultBaseURLString)!
         self.apiClient = APIClient(baseURL: url)
     }
 

@@ -16,7 +16,7 @@ The app uses a modern glassmorphism style with an animated aurora background, ma
 
 - macOS 14+
 - Xcode 15+ (or Swift 5.9 toolchain)
-- Running backend at `http://127.0.0.1:8000` (default)
+- Running backend at `http://sdworkstation.ucsd.edu:8000` (default)
 
 ## Open in Xcode
 
@@ -31,7 +31,7 @@ You can change the backend URL directly in the login screen before authenticatin
 
 Default API base URL:
 
-- `http://127.0.0.1:8000`
+- `http://sdworkstation.ucsd.edu:8000`
 
 ## Backend Endpoints Used
 

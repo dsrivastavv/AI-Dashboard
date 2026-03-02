@@ -134,6 +134,7 @@ final class APIClient {
 
             guard (200...299).contains(httpResponse.statusCode) else {
                 try throwHTTPError(statusCode: httpResponse.statusCode, data: data)
+                throw APIClientError.server(message: HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode))
             }
 
             do {
